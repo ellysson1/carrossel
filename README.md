@@ -3,22 +3,33 @@
 Pipeline de produção dos carrosséis e roteiros do **@profellyssonrocha**.
 Um tema entra; saem os PNG 1080×1350 na ordem, a legenda e as hashtags.
 
-## O caminho principal: o app local
+## Clique e use
 
-```bash
-npm start
-```
+**Windows.** Dê dois cliques em **`Instalar atalho na area de trabalho.cmd`**, uma vez.
+Daí em diante é só clicar no ícone **Carrossel No Controle** na área de trabalho: ele
+instala o que faltar na primeira vez, cria o `.env` se não existir, sobe o app e abre o
+navegador. Para parar, feche a janela preta.
 
-Abre `http://localhost:4173` no seu navegador: você escreve o tema, clica em **Escrever
-carrossel** e a máquina faz o resto — texto, imagens pela Kie, PNG 1080×1350 — mostrando
-cada etapa. Revisa na tela, corrige a frase que quiser, e **Renderizar e abrir a pasta**
-deixa os arquivos prontos no Explorer.
+**Mac e Linux.** `./abrir-carrossel.sh` faz o mesmo.
 
-Aqui não existe sandbox: a chave fica no `.env`, a Kie responde e baixar arquivo é um
-link. É a única superfície onde o pipeline roda inteiro, do tema ao PNG, num clique.
+**Pelo terminal**, se preferir: `npm start` (ou `npm start -- --rede`).
 
-`npm start -- --rede` também publica na sua rede local, para abrir pelo celular enquanto
-o computador estiver ligado.
+Na tela: escreve o tema, clica em **Escrever carrossel**, e a máquina faz o resto —
+texto, imagens, PNG 1080×1350 — mostrando cada etapa. Revisa, corrige a frase que
+quiser, e **Renderizar e abrir a pasta** deixa os arquivos prontos no Explorer.
+
+### No celular
+
+O atalho já sobe o app liberado para a sua rede. Clique em **Abrir no celular** na barra
+de cima: aparece um QR code e o endereço (`http://192.168.x.x:4173`). Aponte a câmera do
+celular e pronto — mesma tela, mesmas imagens, mesmo botão de baixar. O computador
+precisa estar ligado e os dois na mesma rede Wi-Fi.
+
+### Kie ou Gemini, na hora
+
+Tendo as duas chaves no `.env`, o app mostra um seletor de **gerador de imagem** e você
+escolhe por carrossel: Kie.ai, Google Gemini ou nenhum (fundo sólido). Só uma chave, ele
+usa aquela sem perguntar.
 
 ---
 
@@ -136,8 +147,14 @@ número ou gráfico dentro da imagem: dado é slide, não foto.
 Se uma imagem falhar, o slide renderiza sem ela — fundo sólido, que é identidade da
 marca, não remendo.
 
-> **Google Flow não entra aqui**: é aplicativo interativo, sem API pública. O caminho
-> automatizável do lado Google é a Gemini API.
+> **Google Flow não entra aqui**: é aplicativo interativo, sem API pública — não existe
+> chave para automatizar. Do lado Google, quem tem API é a **Gemini** (chave do AI
+> Studio, gratuita para começar), e ela já está implementada: preencha `GEMINI_API_KEY`
+> e escolha Gemini no seletor do app.
+>
+> Se você quiser mesmo usar o Flow numa peça específica: o app mostra o prompt de cada
+> imagem com um botão de copiar. Gere lá, baixe o arquivo e suba pelo campo de imagem do
+> slide — no app local ele é gravado na pasta do carrossel e entra no PNG final.
 
 ## Skill — usar sem digitar comando
 

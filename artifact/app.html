@@ -2,6 +2,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 /* ── tokens do app (a identidade da marca manda; neutros puxados para o marinho) ── */
@@ -232,6 +233,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     <span class="marca"><span class="pastilha">NC</span> Carrossel No Controle</span>
     <span class="espaco"></span>
     <span class="chip" id="chipIA"><span class="ponto"></span> verificando</span>
+    <button class="btn fantasma pequeno" id="btnCelular" type="button" hidden>Abrir no celular</button>
     <button class="btn fantasma pequeno" id="btnTema" type="button">Tema claro/escuro</button>
   </div>
 </div>
@@ -271,6 +273,10 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
             <label for="contexto">Contexto verificado (opcional)</label>
             <textarea id="contexto" placeholder="Cole o trecho do acórdão, do edital ou os números do aluno. Isso vira a matéria-prima do carrossel."></textarea>
             <span class="dica">Sem contexto, o texto fica no terreno do método e não inventa número.</span>
+          </div>
+          <div class="campo" id="campoProvedor" hidden>
+            <label for="provedor">Gerador de imagem</label>
+            <select id="provedor"></select>
           </div>
           <div class="linha">
             <button class="btn principal" id="btnGerar" type="button">Escrever carrossel</button>
@@ -357,6 +363,19 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
         <div id="roteiroSaida"></div>
       </section>
     </div>
+  </div>
+</div>
+
+<div id="celular" class="cartao" hidden
+     style="position:fixed;z-index:80;inset:auto 16px 16px auto;max-width:340px">
+  <h2 style="margin-bottom:8px">Abrir no celular</h2>
+  <p class="dica" style="margin-top:0">O computador precisa ficar ligado, e o celular na mesma rede
+    (mesmo Wi-Fi). Aponte a câmera para o código ou digite o endereço.</p>
+  <div id="qr" style="display:flex;justify-content:center;padding:8px 0"></div>
+  <p id="enderecoCelular" style="font-weight:800;text-align:center;word-break:break-all"></p>
+  <div class="linha">
+    <button class="btn fantasma pequeno" id="btnCopiarEndereco" type="button">Copiar endereço</button>
+    <button class="btn fantasma pequeno" id="btnFecharCelular" type="button">Fechar</button>
   </div>
 </div>
 
@@ -637,6 +656,23 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       var f = entrada.files && entrada.files[0];
       if (!f) return;
       s.imagem = s.imagem || {};
+      if (local && pastaLocal) {
+        var leitorLocal = new FileReader();
+        leitorLocal.onload = async function () {
+          try {
+            var r = await api("/api/imagem", {
+              method: "POST",
+              body: JSON.stringify({ pasta: pastaLocal, indice: estado.indice, dados: String(leitorLocal.result) })
+            });
+            estado.carrossel = r.carrossel;
+            pintarTudo();
+          } catch (e) {
+            mostrarEstado($("estadoExport"), "Não deu para salvar a imagem: " + e.message, "erro");
+          }
+        };
+        leitorLocal.readAsDataURL(f);
+        return;
+      }
       if (caps.assets) {
         try {
           var r = await caps.assets.upload(f);
@@ -753,7 +789,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
           nSlides: opcoes.nSlides,
           palavraCta: opcoes.palavraCta,
           contexto: opcoes.contexto,
-          comImagem: local.temChaveImagem
+          comImagem: provedorEscolhido() !== "none",
+          provedor: provedorEscolhido()
         }, mostrarAndamento($("estadoGeracao")));
         pastaLocal = saida.pasta;
         c = saida.carrossel;
@@ -1019,7 +1056,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     var alvo = $("estadoExport");
     $("btnImagens").disabled = true;
     try {
-      var r = await rodarTarefa({ acao: "imagens", pasta: pastaLocal }, mostrarAndamento(alvo));
+      var r = await rodarTarefa({ acao: "imagens", pasta: pastaLocal, provedor: provedorEscolhido() }, mostrarAndamento(alvo));
       estado.carrossel = r.carrossel;
       pintarTudo();
       $("fluxo").hidden = true;
@@ -1031,6 +1068,15 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     } finally {
       $("btnImagens").disabled = false;
     }
+  };
+
+  $("btnCelular").onclick = abrirPainelCelular;
+  $("btnFecharCelular").onclick = function () { $("celular").hidden = true; };
+  $("btnCopiarEndereco").onclick = function () {
+    navigator.clipboard.writeText($("enderecoCelular").textContent).then(function () {
+      $("btnCopiarEndereco").textContent = "Copiado";
+      setTimeout(function () { $("btnCopiarEndereco").textContent = "Copiar endereço"; }, 1800);
+    });
   };
 
   $("btnZip").onclick = function () { exportar(true); };
@@ -1182,11 +1228,62 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     chip.innerHTML = '<span class="ponto"></span>' + (ligado ? " Claude escreve aqui" : " Modo diagramador");
   }
 
+  function provedorEscolhido() {
+    var sel = $("provedor");
+    return local && sel && sel.value ? sel.value : (local ? local.provedorImagem : "none");
+  }
+
+  function montarProvedores() {
+    var sel = $("provedor");
+    var disponiveis = local.provedores || {};
+    var opcoes = [];
+    if (disponiveis.kie) opcoes.push(["kie", "Kie.ai (nano banana)"]);
+    if (disponiveis.gemini) opcoes.push(["gemini", "Google Gemini (AI Studio)"]);
+    opcoes.push(["none", "Sem imagem (fundo sólido)"]);
+    sel.innerHTML = "";
+    opcoes.forEach(function (o) {
+      var el = document.createElement("option");
+      el.value = o[0];
+      el.textContent = o[1];
+      sel.appendChild(el);
+    });
+    sel.value = disponiveis[local.provedorImagem] ? local.provedorImagem : opcoes[0][0];
+    $("campoProvedor").hidden = opcoes.length < 2;
+    sel.onchange = function () {
+      $("btnImagens").hidden = sel.value === "none";
+    };
+  }
+
+  function abrirPainelCelular() {
+    var enderecos = (local && local.enderecos) || [];
+    var alvo = enderecos[0];
+    var painel = $("celular");
+    var qr = $("qr");
+    qr.innerHTML = "";
+    if (!alvo) {
+      $("enderecoCelular").textContent = "O app está aberto só neste computador.";
+      qr.innerHTML = '<p class="dica" style="text-align:center;margin:0">Feche o app e abra de novo pelo atalho — ' +
+        'ele já sobe liberado para a sua rede. Se você iniciou pelo terminal, use <code>npm start -- --rede</code>.</p>';
+    } else {
+      $("enderecoCelular").textContent = alvo;
+      if (window.QRCode) {
+        try {
+          new window.QRCode(qr, { text: alvo, width: 180, height: 180, colorDark: "#0D2B5E", colorLight: "#ffffff" });
+        } catch (e) { qr.innerHTML = ""; }
+      }
+    }
+    painel.hidden = false;
+  }
+
   function marcarChipLocal() {
     var chip = $("chipIA");
     chip.className = "chip ligado";
-    chip.innerHTML = '<span class="ponto"></span> App local' +
-      (local && local.temChaveImagem ? " · imagens ligadas" : " · sem chave de imagem");
+    var quais = [];
+    if (local && local.provedores) {
+      if (local.provedores.kie) quais.push("Kie");
+      if (local.provedores.gemini) quais.push("Gemini");
+    }
+    chip.innerHTML = '<span class="ponto"></span> App local' + (quais.length ? " · " + quais.join(" + ") : " · sem chave de imagem");
   }
 
   (async function iniciar() {
@@ -1200,10 +1297,12 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       $("btnGerar").disabled = false;
       $("btnRoteiro").disabled = false;
       $("btnZip").textContent = "Renderizar e abrir a pasta";
-      $("btnImagens").hidden = !local.temChaveImagem;
-      if (!local.temChaveImagem) {
+      montarProvedores();
+      $("btnImagens").hidden = provedorEscolhido() === "none";
+      $("btnCelular").hidden = false;
+      if (!local.provedores || (!local.provedores.kie && !local.provedores.gemini)) {
         mostrarEstado($("estadoGeracao"),
-          "Sem chave de imagem no .env: o carrossel sai com fundo sólido. Preencha KIE_API_KEY e reinicie o app para ter fotos.", "alerta");
+          "Nenhuma chave de imagem no .env: o carrossel sai com fundo sólido. Preencha KIE_API_KEY ou GEMINI_API_KEY e reinicie o app.", "alerta");
       }
       historicoLocal();
       return;

@@ -105,6 +105,18 @@ function listarCarrosseis() {
 
 /** Abre pasta ou URL no sistema. Se o comando não existir (container, servidor
     sem interface), apenas avisa — nunca derruba o servidor. */
+/** URLs desta máquina na rede local — é o que você abre no celular. */
+let PORTA_ATUAL = 4173;
+function enderecosDaRede() {
+  const fora = [];
+  for (const lista of Object.values(os.networkInterfaces())) {
+    for (const i of lista || []) {
+      if (i.family === "IPv4" && !i.internal) fora.push(`http://${i.address}:${PORTA_ATUAL}`);
+    }
+  }
+  return fora;
+}
+
 function abrirNoSistema(alvo) {
   const cmd = process.platform === "win32" ? "explorer" : process.platform === "darwin" ? "open" : "xdg-open";
   try {
@@ -134,10 +146,11 @@ const ACOES = {
     salvarCarrossel(pasta, c);
     anotar(t, `texto pronto: ${(c.slides || []).length} slides`);
 
-    if (dados.comImagem !== false && provedorAtual() !== "none") {
+    if (dados.comImagem !== false && (dados.provedor || provedorAtual()) !== "none") {
       anotar(t, "gerando as imagens");
       const r = await gerarImagens(c, {
         pasta,
+        provedor: dados.provedor || undefined,
         aoProgredir: (i, estado) => anotar(t, `imagem do slide ${i + 1}: ${estado}`)
       });
       salvarCarrossel(pasta, c);
@@ -152,9 +165,11 @@ const ACOES = {
   async imagens(t, dados) {
     const pasta = pastaSegura(dados.pasta);
     const c = lerCarrossel(pasta);
-    anotar(t, `gerando imagens pelo provedor ${provedorAtual()}`);
+    const provedor = dados.provedor || provedorAtual();
+    anotar(t, `gerando imagens pelo provedor ${provedor}`);
     const r = await gerarImagens(c, {
       pasta,
+      provedor,
       forcar: !!dados.forcar,
       aoProgredir: (i, estado) => anotar(t, `slide ${i + 1}: ${estado}`)
     });
@@ -209,10 +224,13 @@ async function rotear(req, res) {
 
   if (rota === "/api/ping") {
     const provedor = provedorAtual();
+    const provedores = { kie: !!process.env.KIE_API_KEY, gemini: !!process.env.GEMINI_API_KEY };
     return responder(res, 200, {
       local: true,
       provedorImagem: provedor,
-      temChaveImagem: provedor === "none" ? false : !!(provedor === "kie" ? process.env.KIE_API_KEY : process.env.GEMINI_API_KEY),
+      provedores,
+      temChaveImagem: provedor === "none" ? false : !!provedores[provedor],
+      enderecos: enderecosDaRede(),
       linhasEditoriais: Object.keys(brand.linhasEditoriais)
     });
   }
@@ -256,6 +274,28 @@ async function rotear(req, res) {
     return responder(res, 200, lint.lint(corpo, brand));
   }
 
+  if (rota === "/api/imagem" && req.method === "POST") {
+    const corpo = await lerCorpo(req);
+    const pasta = pastaSegura(corpo.pasta);
+    const c = lerCarrossel(pasta);
+    const i = Number(corpo.indice);
+    const slide = (c.slides || [])[i];
+    if (!slide) return responder(res, 400, { erro: "slide inexistente" });
+
+    const bruto = String(corpo.dados || "");
+    const casa = bruto.match(/^data:(image\/(png|jpeg|jpg|webp));base64,(.+)$/);
+    if (!casa) return responder(res, 400, { erro: "envie uma imagem png, jpeg ou webp" });
+    const ext = casa[2] === "jpeg" ? "jpg" : casa[2];
+    const nome = `manual-${String(i + 1).padStart(2, "0")}-${Date.now()}.${ext}`;
+    fs.writeFileSync(path.join(garantirPasta(path.join(pasta, "img")), nome), Buffer.from(casa[3], "base64"));
+
+    slide.imagem = Object.assign({}, slide.imagem, { arquivo: `img/${nome}` });
+    delete slide.imagem.url;
+    delete slide.imagem.dataUrl;
+    salvarCarrossel(pasta, c);
+    return responder(res, 200, { arquivo: `img/${nome}`, carrossel: c });
+  }
+
   if (rota === "/api/abrir" && req.method === "POST") {
     const corpo = await lerCorpo(req);
     abrirNoSistema(pastaSegura(corpo.pasta));
@@ -287,19 +327,14 @@ export async function subirServidor({ porta = 4173, rede = false } = {}) {
     });
   });
 
+  PORTA_ATUAL = porta;
   const host = rede ? "0.0.0.0" : "127.0.0.1";
   await new Promise((r) => servidor.listen(porta, host, r));
 
   console.log("");
   console.log(cores.forte("Carrossel No Controle") + cores.fraco(" — app local"));
   console.log(`  ${cores.ok(`http://localhost:${porta}`)}`);
-  if (rede) {
-    for (const lista of Object.values(os.networkInterfaces())) {
-      for (const i of lista || []) {
-        if (i.family === "IPv4" && !i.internal) console.log(cores.fraco(`  no celular (mesma rede): http://${i.address}:${porta}`));
-      }
-    }
-  }
+  if (rede) for (const e of enderecosDaRede()) console.log(cores.fraco(`  no celular (mesma rede): ${e}`));
   const provedor = provedorAtual();
   const temChave = provedor === "none" ? true : !!(provedor === "kie" ? process.env.KIE_API_KEY : process.env.GEMINI_API_KEY);
   console.log(cores.fraco(`  imagens: ${provedor}${temChave ? "" : cores.erro("  (sem chave no .env)")}`));
