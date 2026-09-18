@@ -21,6 +21,40 @@ const TIPOS = {
   ".webp": "image/webp", ".txt": "text/plain; charset=utf-8"
 };
 
+/* A página é escrita para o claude.ai, que monta o <head> por ela. Servindo daqui,
+   esse <head> é nosso — sem ele o celular abre a página em largura de desktop. */
+const ICONE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<rect width="64" height="64" rx="14" fill="#0D2B5E"/>
+<rect x="14" y="20" width="36" height="10" rx="2" fill="#F5C842"/>
+<rect x="14" y="34" width="26" height="4" rx="2" fill="#FFFFFF" opacity=".85"/>
+<rect x="14" y="42" width="18" height="4" rx="2" fill="#FFFFFF" opacity=".55"/>
+</svg>`;
+
+function comCabecalho(html) {
+  if (/^\s*<!doctype/i.test(html)) return html;
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D2B5E">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icone.svg">
+<style>
+  :root { color-scheme: light dark; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; font: 14px system-ui, sans-serif; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+${html}
+</body>
+</html>`;
+}
+
 // ── tarefas em andamento ─────────────────────────────────────────────────────
 
 const tarefas = new Map();
@@ -219,7 +253,23 @@ async function rotear(req, res) {
     if (!fs.existsSync(arquivo)) {
       return responder(res, 500, "Rode `npm run build:artifact` antes de subir o servidor.", "text/plain; charset=utf-8");
     }
-    return responder(res, 200, fs.readFileSync(arquivo), TIPOS[".html"]);
+    return responder(res, 200, comCabecalho(fs.readFileSync(arquivo, "utf8")), TIPOS[".html"]);
+  }
+
+  if (rota === "/manifest.webmanifest") {
+    return responder(res, 200, {
+      name: "Carrossel No Controle",
+      short_name: "Carrossel",
+      start_url: "/",
+      display: "standalone",
+      background_color: "#0D2B5E",
+      theme_color: "#0D2B5E",
+      icons: [{ src: "/icone.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }]
+    }, "application/manifest+json; charset=utf-8");
+  }
+
+  if (rota === "/icone.svg") {
+    return responder(res, 200, ICONE, "image/svg+xml; charset=utf-8");
   }
 
   if (rota === "/api/ping") {

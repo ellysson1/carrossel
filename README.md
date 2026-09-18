@@ -20,10 +20,20 @@ quiser, e **Renderizar e abrir a pasta** deixa os arquivos prontos no Explorer.
 
 ### No celular
 
-O atalho já sobe o app liberado para a sua rede. Clique em **Abrir no celular** na barra
-de cima: aparece um QR code e o endereço (`http://192.168.x.x:4173`). Aponte a câmera do
-celular e pronto — mesma tela, mesmas imagens, mesmo botão de baixar. O computador
-precisa estar ligado e os dois na mesma rede Wi-Fi.
+**Em casa, no mesmo Wi-Fi.** Clique em **Abrir no celular** na barra de cima: aparece um
+QR code e o endereço (`http://192.168.x.x:4173`). Aponte a câmera e pronto — mesma tela,
+mesmas imagens, mesmo botão de baixar. No Android/iPhone, "Adicionar à tela de início"
+deixa um ícone que abre direto.
+
+Para o ícone funcionar sempre que o PC estiver ligado, rode uma vez
+**`Iniciar junto com o Windows.cmd`**: o app passa a subir minimizado no login.
+
+**Fora de casa.** Aí o celular não alcança o seu PC, e a página publicada no claude.ai
+não alcança a Kie. O caminho é a fila: escreva o carrossel no artifact e toque em
+**Pedir imagens no PC**. Isso enfileira o pedido no banco do próprio artifact. Quando
+voltar ao computador, abra o Claude Code na pasta do projeto e diga *"processa os pedidos
+do celular"*: ele gera as imagens, renderiza os PNG e devolve o carrossel ao histórico do
+app, pronto para baixar pelo celular.
 
 ### Kie ou Gemini, na hora
 

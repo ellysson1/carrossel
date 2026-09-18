@@ -110,6 +110,28 @@ editar qualquer frase e exportar o `.zip` pelo celular.
 Nunca grave na base um carrossel de teste, e nunca apague documento que você não criou
 nesta conversa.
 
+## Pedidos vindos do celular
+
+No artifact, o botão **Pedir imagens no PC** enfileira o carrossel na coleção `pedidos`
+do banco do artifact. Quando o usuário disser "processa os pedidos", "tem pedido do
+celular?", "roda o que eu pedi no celular" — ou quando ele abrir a sessão e você já
+souber que existe fila — faça o seguinte, um pedido de cada vez:
+
+1. Leia a fila com a ferramenta de dados: ação `query` na coleção `pedidos`, filtro
+   `status == "pendente"`, salvando os documentos em arquivos (`out_dir`).
+2. Para cada pedido: `node scripts/importar-pedido.js <arquivo do pedido>` — ele grava a
+   pasta em `out/` e diz qual é.
+3. `node bin/carrossel.js imagens <pasta>` (gera as fotos) e depois
+   `node bin/carrossel.js render <pasta>`.
+4. Devolva ao app pelo caminho de sempre (`preparar-app.js --listar`, subir as imagens
+   como assets, `--urls`, gravar em `carrosseis`).
+5. Marque o pedido como resolvido: ação `update` em `pedidos/<id>` com
+   `{status: "feito", pasta: "<pasta>", docId: "<docId>"}`, pinando o `if_version` que
+   você leu. Nunca apague o pedido.
+6. Diga ao usuário, em uma linha, quais temas ficaram prontos — ele vai abrir no celular.
+
+Se a fila estiver vazia, diga isso e não invente trabalho.
+
 ## Regras da marca
 
 Elas já estão dentro da ferramenta — `brand/brand.json` para paleta e voz,

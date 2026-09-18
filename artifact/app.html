@@ -78,6 +78,7 @@ body {
   display: flex; align-items: center; gap: 12px; min-height: 56px; flex-wrap: wrap;
 }
 .marca { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: -0.01em; }
+.marca .nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .marca .pastilha {
   width: 26px; height: 26px; border-radius: 50%;
   border: 2px solid var(--ambar); color: var(--ambar);
@@ -85,9 +86,16 @@ body {
 }
 .barra .espaco { flex: 1 1 auto; }
 @media (max-width: 560px) {
-  .barra-in { gap: 8px; min-height: 50px; }
-  .chip { font-size: 11px; padding: 3px 8px; letter-spacing: 0.02em; }
-  #btnTema { font-size: 12px; padding: 5px 9px; }
+  .barra-in { gap: 8px; min-height: 48px; flex-wrap: nowrap; }
+  .marca { font-size: 14px; min-width: 0; }
+  .marca .pastilha { flex: 0 0 auto; }
+  .resto { display: none; }
+  .chip { font-size: 10px; padding: 3px 7px; letter-spacing: 0; white-space: nowrap; }
+  .chip .detalhe { display: none; }
+  #btnTema { font-size: 11px; padding: 5px 8px; flex: 0 0 auto; }
+  /* no próprio celular o botão "abrir no celular" não serve para nada */
+  #btnCelular { display: none; }
+  #celular { inset: auto 12px 12px 12px; max-width: none; }
 }
 
 .chip {
@@ -230,11 +238,11 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
 <div class="barra">
   <div class="barra-in">
-    <span class="marca"><span class="pastilha">NC</span> Carrossel No Controle</span>
+    <span class="marca"><span class="pastilha">NC</span> <span class="nome">Carrossel<span class="resto"> No Controle</span></span></span>
     <span class="espaco"></span>
     <span class="chip" id="chipIA"><span class="ponto"></span> verificando</span>
     <button class="btn fantasma pequeno" id="btnCelular" type="button" hidden>Abrir no celular</button>
-    <button class="btn fantasma pequeno" id="btnTema" type="button">Tema claro/escuro</button>
+    <button class="btn fantasma pequeno" id="btnTema" type="button">Tema<span class="resto"> claro/escuro</span></button>
   </div>
 </div>
 
@@ -326,6 +334,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
             <button class="btn fantasma" id="btnPng" type="button">Baixar este slide</button>
             <button class="btn fantasma" id="btnCopiarLegenda" type="button">Copiar legenda</button>
             <button class="btn fantasma" id="btnImagens" type="button" hidden>Gerar as imagens</button>
+            <button class="btn fantasma" id="btnPedir" type="button" hidden>Pedir imagens no PC</button>
           </div>
           <div id="estadoExport" class="aviso" hidden style="margin-top:12px"></div>
           <h3 style="margin-top:18px">Legenda</h3>
@@ -587,7 +596,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     bRe.className = "btn fantasma pequeno";
     bRe.textContent = "Regerar este slide";
     bRe.onclick = regerarSlide;
-    bRe.disabled = !caps.sample;
+    bRe.disabled = !(caps.sample || local);
     acoes.appendChild(bRe);
     topo.appendChild(acoes);
     ed.appendChild(topo);
@@ -1070,6 +1079,28 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     }
   };
 
+  $("btnPedir").onclick = async function () {
+    var alvo = $("estadoExport");
+    if (!caps.db) { mostrarEstado(alvo, "Esta visualização não guarda pedidos.", "alerta"); return; }
+    $("btnPedir").disabled = true;
+    try {
+      await caps.db.collection("pedidos").add({
+        status: "pendente",
+        criadoEm: Date.now(),
+        tema: (estado.carrossel.meta || {}).tema || "sem tema",
+        carrossel: estado.carrossel
+      });
+      mostrarEstado(alvo,
+        "Pedido na fila. No computador, abra o Claude Code na pasta do projeto e diga " +
+        "\u201cprocessa os pedidos do celular\u201d: ele gera as imagens, renderiza os PNG e " +
+        "devolve o carrossel aqui no histórico, pronto para baixar.", "ok");
+    } catch (e) {
+      mostrarEstado(alvo, "Não consegui registrar o pedido: " + (e.message || e), "erro");
+    } finally {
+      $("btnPedir").disabled = false;
+    }
+  };
+
   $("btnCelular").onclick = abrirPainelCelular;
   $("btnFecharCelular").onclick = function () { $("celular").hidden = true; };
   $("btnCopiarEndereco").onclick = function () {
@@ -1225,7 +1256,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   function marcarChip(ligado) {
     var chip = $("chipIA");
     chip.className = "chip " + (ligado ? "ligado" : "manual");
-    chip.innerHTML = '<span class="ponto"></span>' + (ligado ? " Claude escreve aqui" : " Modo diagramador");
+    chip.innerHTML = '<span class="ponto"></span>' + (ligado ? " Claude<span class=\"detalhe\"> escreve aqui</span>" : " Diagramador");
   }
 
   function provedorEscolhido() {
@@ -1283,7 +1314,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       if (local.provedores.kie) quais.push("Kie");
       if (local.provedores.gemini) quais.push("Gemini");
     }
-    chip.innerHTML = '<span class="ponto"></span> App local' + (quais.length ? " · " + quais.join(" + ") : " · sem chave de imagem");
+    chip.innerHTML = '<span class="ponto"></span> App local<span class="detalhe"> · ' +
+      (quais.length ? quais.join(" + ") : "sem chave de imagem") + "</span>";
   }
 
   (async function iniciar() {
@@ -1321,6 +1353,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     if (!caps.sample) {
       mostrarEstado($("estadoGeracao"), "A geração pelo Claude não está disponível nesta visualização. A página segue funcionando como diagramador: cole o JSON logo abaixo.", "alerta");
     }
+    $("btnPedir").hidden = !caps.db;
     if (caps.db) {
       try {
         caps.db.collection("carrosseis").orderBy("atualizadoEm", "desc").limit(20).onSnapshot(function (snap) {
