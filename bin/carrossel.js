@@ -243,8 +243,18 @@ async function cmdDoctor(opts) {
     console.log(`Imagem          ${cores.fraco("desligado (IMAGE_PROVIDER=none)")}`);
   } else {
     const chave = provedor === "kie" ? process.env.KIE_API_KEY : process.env.GEMINI_API_KEY;
+    const nomeChave = provedor === "kie" ? "KIE_API_KEY" : "GEMINI_API_KEY";
+    const temEnv = fs.existsSync(path.join(RAIZ, ".env"));
     if (!chave) {
-      console.log(`Imagem          ${cores.erro("sem chave")} ${cores.fraco(`defina ${provedor === "kie" ? "KIE_API_KEY" : "GEMINI_API_KEY"} no .env`)}`);
+      console.log(`Imagem          ${cores.erro("sem chave")} ${cores.fraco(nomeChave + " não está definida")}`);
+      if (!temEnv) {
+        console.log(cores.fraco(`   o arquivo .env ainda não existe na raiz do projeto. Crie assim:`));
+        console.log(cores.fraco(`     cp .env.example .env`));
+        console.log(cores.fraco(`   depois abra o .env e escreva a chave na linha ${nomeChave}= (sem aspas, sem espaço).`));
+      } else {
+        console.log(cores.fraco(`   o .env existe, mas a linha ${nomeChave}= está vazia. Preencha e rode de novo.`));
+      }
+      console.log(cores.fraco(`   a chave da Kie fica em kie.ai → sua conta → API Key.`));
     } else if (opts.rapido) {
       console.log(`Imagem          ${cores.fraco("chave presente (use `carrossel doctor` sem --rapido para gerar uma imagem de teste)")}`);
     } else {
