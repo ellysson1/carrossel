@@ -145,20 +145,31 @@ function enderecosDaRede() {
   const fora = [];
   for (const lista of Object.values(os.networkInterfaces())) {
     for (const i of lista || []) {
-      if (i.family === "IPv4" && !i.internal) fora.push(`http://${i.address}:${PORTA_ATUAL}`);
+      const privado = i.family === "IPv4" && !i.internal &&
+        (/^10\./.test(i.address) || /^192\.168\./.test(i.address) ||
+         /^172\.(1[6-9]|2\d|3[01])\./.test(i.address));
+      if (privado) fora.push(`http://${i.address}:${PORTA_ATUAL}`);
     }
   }
   return fora;
 }
 
 function abrirNoSistema(alvo) {
-  const cmd = process.platform === "win32" ? "explorer" : process.platform === "darwin" ? "open" : "xdg-open";
+  const falhou = () => console.log(cores.fraco(`   (abra você mesmo: ${alvo})`));
   try {
-    const p = spawn(cmd, [alvo], { detached: true, stdio: "ignore" });
-    p.on("error", () => console.log(cores.fraco(`   (não consegui abrir automaticamente: ${alvo})`)));
+    let p;
+    if (process.platform === "win32") {
+      // `start` é o que abre URL e pasta no Windows; o primeiro "" é o título da janela
+      p = spawn("cmd", ["/c", "start", "", alvo.replace(/&/g, "^&")], {
+        detached: true, stdio: "ignore", windowsHide: true
+      });
+    } else {
+      p = spawn(process.platform === "darwin" ? "open" : "xdg-open", [alvo], { detached: true, stdio: "ignore" });
+    }
+    p.on("error", falhou);
     p.unref();
   } catch {
-    console.log(cores.fraco(`   (não consegui abrir automaticamente: ${alvo})`));
+    falhou();
   }
 }
 
@@ -369,7 +380,7 @@ async function rotear(req, res) {
 
 // ── subida ───────────────────────────────────────────────────────────────────
 
-export async function subirServidor({ porta: portaPedida = 4173, rede = false } = {}) {
+export async function subirServidor({ porta: portaPedida = 4173, rede = false, abrirSozinho = true } = {}) {
   let porta = portaPedida;
   const servidor = http.createServer((req, res) => {
     rotear(req, res).catch((e) => {
@@ -412,7 +423,7 @@ export async function subirServidor({ porta: portaPedida = 4173, rede = false } 
   console.log(cores.fraco("  Ctrl+C para parar."));
   console.log("");
 
-  if (!rede) abrirNoSistema(`http://localhost:${porta}`);
+  if (abrirSozinho !== false) abrirNoSistema(`http://localhost:${porta}`);
   void abrirNavegador;
   return servidor;
 }

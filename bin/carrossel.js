@@ -288,7 +288,11 @@ async function principal() {
     case "lote": await cmdLote(opts._[1], opts); break;
     case "app": {
       const { subirServidor } = await import("../src/servidor.js");
-      await subirServidor({ porta: Number(opts.porta) || 4173, rede: !!opts.rede });
+      await subirServidor({
+        porta: Number(opts.porta) || 4173,
+        rede: !!opts.rede,
+        abrirSozinho: !opts["sem-navegador"]
+      });
       await new Promise(() => {});
       break;
     }
