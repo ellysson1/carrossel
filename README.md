@@ -5,14 +5,30 @@ Um tema entra; saem os PNG 1080×1350 na ordem, a legenda e as hashtags.
 
 ## Clique e use
 
-**Windows.** Dê dois cliques em **`Instalar atalho na area de trabalho.cmd`**, uma vez.
-Daí em diante é só clicar no ícone **Carrossel No Controle** na área de trabalho: ele
-instala o que faltar na primeira vez, cria o `.env` se não existir, sobe o app e abre o
-navegador. Para parar, feche a janela preta.
+**Windows — uma vez só.** Abra o PowerShell na pasta do projeto e cole:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\instalar-atalho.ps1
+```
+
+Ele cria o ícone **Carrossel No Controle** na área de trabalho e pergunta se você quer
+que o app suba junto com o Windows. Daí em diante é dois cliques no ícone: ele instala o
+que faltar, cria o `.env` se não existir, sobe o app e abre o navegador. Para parar,
+feche a janela.
+
+O atalho aponta para o `powershell.exe` com o `Abrir-Carrossel.ps1` — não depende de
+associação de arquivo `.cmd` nem de política de execução, que é onde o duplo clique
+costuma falhar no Windows.
 
 **Mac e Linux.** `./abrir-carrossel.sh` faz o mesmo.
 
 **Pelo terminal**, se preferir: `npm start` (ou `npm start -- --rede`).
+
+**Quando algo não abrir**, rode o diagnóstico e mande o arquivo que ele gera:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\diagnostico.ps1
+```
 
 Na tela: escreve o tema, clica em **Escrever carrossel**, e a máquina faz o resto —
 texto, imagens, PNG 1080×1350 — mostrando cada etapa. Revisa, corrige a frase que
@@ -25,8 +41,8 @@ QR code e o endereço (`http://192.168.x.x:4173`). Aponte a câmera e pronto —
 mesmas imagens, mesmo botão de baixar. No Android/iPhone, "Adicionar à tela de início"
 deixa um ícone que abre direto.
 
-Para o ícone funcionar sempre que o PC estiver ligado, rode uma vez
-**`Iniciar junto com o Windows.cmd`**: o app passa a subir minimizado no login.
+Para o ícone funcionar sempre que o PC estiver ligado, responda **s** à pergunta do
+`instalar-atalho.ps1`: o app passa a subir minimizado no login.
 
 **Fora de casa.** Aí o celular não alcança o seu PC, e a página publicada no claude.ai
 não alcança a Kie. O caminho é a fila: escreva o carrossel no artifact e toque em
