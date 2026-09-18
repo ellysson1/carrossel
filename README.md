@@ -3,17 +3,22 @@
 Pipeline de produção dos carrosséis e roteiros do **@profellyssonrocha**.
 Um tema entra; saem os PNG 1080×1350 na ordem, a legenda e as hashtags.
 
-São duas superfícies em cima do **mesmo motor**:
+São três camadas em cima do **mesmo motor**:
 
-| Superfície | Onde roda | O que faz | Chave de API |
+| Camada | Onde roda | O que faz | Chave de API |
 |---|---|---|---|
+| **Skill** (`.claude/skills/carrossel/`) | Cowork · Claude Code | "gera um carrossel sobre X" → o Claude opera a CLI por você | usa a do `.env` |
 | **CLI** (`bin/carrossel.js`) | sua máquina | texto pelo Claude · imagens pela Kie/Gemini · PNG pelo Chromium · lote | sim (Kie ou Gemini, no `.env`) |
-| **Artifact** (`artifact/`) | claude.ai, celular incluso | texto pelo Claude dentro da página · edição · export PNG/ZIP · teleprompter | não |
+| **Artifact** (`artifact/`) | claude.ai, celular incluso | revisar, editar, exportar PNG/ZIP · escrever direto na página · teleprompter | não |
+
+A Skill fecha o ciclo: ela sobe as imagens para o acervo do artifact e grava o carrossel
+na base dele, então a peça gerada na sua máquina **aparece sozinha no histórico da
+página**, com as fotos no lugar, pronta para você revisar no celular.
 
 O que é regra da marca — paleta, tipografia, estrutura dos slides, voz, proibições —
-mora em quatro arquivos que as duas superfícies leem: `brand/brand.json`,
+mora em cinco arquivos que todas as camadas leem: `brand/brand.json`,
 `src/layout/slides.css`, `src/layout/engine.cjs`, `src/copy/prompt.cjs` e `src/copy/lint.cjs`.
-Mudou a regra num lugar, mudou nos dois.
+Mudou a regra num lugar, mudou em todas.
 
 ---
 
@@ -112,6 +117,31 @@ marca, não remendo.
 
 > **Google Flow não entra aqui**: é aplicativo interativo, sem API pública. O caminho
 > automatizável do lado Google é a Gemini API.
+
+## Skill — usar sem digitar comando
+
+`.claude/skills/carrossel/SKILL.md` ensina o Claude a operar tudo isto por conta
+própria. No Claude Code, basta abrir esta pasta. No Cowork, envie a pasta da skill nas
+suas skills do claude.ai, como as outras que você já usa.
+
+A partir daí é conversa:
+
+> gera um carrossel sobre por que a taxa de acerto cai na semana da prova
+
+> carrossel do TCU sobre o acórdão que eu te mandei, e manda pro app
+
+> os temas da semana: [três linhas] — roda tudo
+
+## Levar um carrossel da CLI para o app
+
+```bash
+node scripts/preparar-app.js out/<pasta> --listar
+# suba as imagens listadas para o acervo do artifact, guarde as urls /_blob/…
+node scripts/preparar-app.js out/<pasta> --urls '{"img/slide-01-ab.png":"/_blob/…"}'
+# grave out/<pasta>/app-doc.json na coleção "carrosseis" da base do artifact
+```
+
+A Skill faz esses três passos sozinha. O histórico da página lê essa coleção.
 
 ## Artifact (celular)
 
