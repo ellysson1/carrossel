@@ -47,6 +47,13 @@ if (-not (Test-Path "package.json")) {
 # e continua com a versao que ja esta no disco: atualizar nunca impede de usar.
 if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path ".git")) {
   Passo "Procurando atualizacoes..."
+
+  # arquivos que o proprio app regera: se so eles estiverem sujos, restaura e segue
+  foreach ($gerado in @("artifact/index.html")) {
+    $estado = git status --porcelain -- $gerado 2>$null
+    if ($estado) { git checkout -- $gerado 2>$null }
+  }
+
   $sujo = (git status --porcelain 2>$null | Measure-Object).Count
   if ($sujo -gt 0) {
     Write-Host "  Voce tem alteracoes locais nao salvas: pulei a atualizacao." -ForegroundColor Yellow

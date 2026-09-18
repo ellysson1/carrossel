@@ -4,3 +4,7 @@ node_modules/
 out/
 *.log
 .DS_Store
+
+# gerado por `npm run build:artifact` a cada subida do app:
+# versionar isto faz todo git pull abortar com "local changes would be overwritten"
+artifact/index.html

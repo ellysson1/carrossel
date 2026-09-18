@@ -10,6 +10,8 @@ fi
 
 # o app se atualiza sozinho; falha de rede ou alteração local nunca impede de abrir
 if command -v git >/dev/null 2>&1 && [ -d .git ]; then
+  # o app regera este arquivo a cada subida: restaura antes de comparar
+  [ -n "$(git status --porcelain -- artifact/index.html 2>/dev/null)" ] && git checkout -- artifact/index.html 2>/dev/null
   if [ -z "$(git status --porcelain)" ]; then
     antes=$(git rev-parse HEAD)
     if git pull --ff-only >/dev/null 2>&1; then
