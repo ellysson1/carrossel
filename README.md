@@ -3,17 +3,37 @@
 Pipeline de produção dos carrosséis e roteiros do **@profellyssonrocha**.
 Um tema entra; saem os PNG 1080×1350 na ordem, a legenda e as hashtags.
 
-São três camadas em cima do **mesmo motor**:
+## O caminho principal: o app local
 
-| Camada | Onde roda | O que faz | Chave de API |
-|---|---|---|---|
-| **Skill** (`.claude/skills/carrossel/`) | Cowork · Claude Code | "gera um carrossel sobre X" → o Claude opera a CLI por você | usa a do `.env` |
-| **CLI** (`bin/carrossel.js`) | sua máquina | texto pelo Claude · imagens pela Kie/Gemini · PNG pelo Chromium · lote | sim (Kie ou Gemini, no `.env`) |
-| **Artifact** (`artifact/`) | claude.ai, celular incluso | revisar, editar, exportar PNG/ZIP · escrever direto na página · teleprompter | não |
+```bash
+npm start
+```
 
-A Skill fecha o ciclo: ela sobe as imagens para o acervo do artifact e grava o carrossel
-na base dele, então a peça gerada na sua máquina **aparece sozinha no histórico da
-página**, com as fotos no lugar, pronta para você revisar no celular.
+Abre `http://localhost:4173` no seu navegador: você escreve o tema, clica em **Escrever
+carrossel** e a máquina faz o resto — texto, imagens pela Kie, PNG 1080×1350 — mostrando
+cada etapa. Revisa na tela, corrige a frase que quiser, e **Renderizar e abrir a pasta**
+deixa os arquivos prontos no Explorer.
+
+Aqui não existe sandbox: a chave fica no `.env`, a Kie responde e baixar arquivo é um
+link. É a única superfície onde o pipeline roda inteiro, do tema ao PNG, num clique.
+
+`npm start -- --rede` também publica na sua rede local, para abrir pelo celular enquanto
+o computador estiver ligado.
+
+---
+
+Tudo isto é a mesma máquina por baixo, em quatro superfícies:
+
+| Superfície | Onde roda | Pipeline completo? |
+|---|---|---|
+| **App local** (`npm start`) | seu navegador, servido pela sua máquina | sim — texto, imagens e PNG |
+| **CLI** (`bin/carrossel.js`) | terminal | sim, e é o caminho do lote |
+| **Skill** (`.claude/skills/carrossel/`) | Cowork · Claude Code | sim, se o ambiente alcançar a Kie |
+| **Artifact** (`artifact/`) | claude.ai, celular | texto, edição e export — imagem entra por upload |
+
+O app local e o artifact são **o mesmo arquivo**: `artifact/index.html`. A página
+descobre sozinha onde está — se o servidor local responder, usa a máquina; se estiver
+publicada no claude.ai, usa as capabilities.
 
 O que é regra da marca — paleta, tipografia, estrutura dos slides, voz, proibições —
 mora em cinco arquivos que todas as camadas leem: `brand/brand.json`,
@@ -81,6 +101,7 @@ node bin/carrossel.js lote temas.txt
 
 | Comando | O que faz |
 |---|---|
+| `app` | sobe o app local (`--porta`, `--rede`) |
 | `novo` | pipeline completo: texto → imagens → PNG |
 | `texto` | só o `carrossel.json` |
 | `imagens <pasta>` | gera as imagens que faltam (não refaz o que está em cache) |

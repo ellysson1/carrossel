@@ -7,30 +7,54 @@ import { brand, prompt, lint, extrairJSON, cores, passo } from "../nucleo.js";
 
 const MODELO_PADRAO = process.env.CARROSSEL_MODELO || "sonnet";
 
-function viaClaudeCli(texto, { modelo = MODELO_PADRAO, sinal } = {}) {
+/* A CLI do Claude aceita o prompt de duas formas, e nem todo ambiente aceita as
+   duas: como argumento de `-p`, ou por stdin. No Windows o binário é um .cmd, que
+   precisa de shell — e passar um prompt longo pela linha de comando do cmd.exe
+   estraga aspas e quebras de linha, então lá o caminho é stdin. Em qualquer caso,
+   se a primeira forma falhar, tentamos a outra antes de desistir. */
+function chamarCli(texto, { modelo, sinal, porStdin }) {
   return new Promise((resolve, reject) => {
-    const args = ["-p", "--output-format", "json", "--model", modelo];
-    const p = spawn("claude", args, { stdio: ["pipe", "pipe", "pipe"] });
+    const args = porStdin
+      ? ["-p", "--output-format", "json", "--model", modelo]
+      : ["-p", texto, "--output-format", "json", "--model", modelo];
+    const p = spawn("claude", args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: process.platform === "win32"
+    });
     let out = "", err = "";
     p.stdout.on("data", (d) => (out += d));
     p.stderr.on("data", (d) => (err += d));
-    p.on("error", (e) => reject(new Error(
+    p.on("error", (e) => reject(Object.assign(new Error(
       e.code === "ENOENT"
         ? "CLI do Claude não encontrada. Instale o Claude Code ou use COPY_PROVIDER=anthropic."
-        : e.message)));
+        : e.message), { fatal: e.code === "ENOENT" })));
     p.on("close", (code) => {
       if (code !== 0) return reject(new Error(`claude saiu com código ${code}: ${err.slice(0, 500)}`));
+      let env;
       try {
-        const env = JSON.parse(out);
-        if (env.is_error) return reject(new Error(String(env.result).slice(0, 500)));
-        resolve(env.result);
+        env = JSON.parse(out);
       } catch {
-        resolve(out);
+        return out.trim() ? resolve(out) : reject(new Error("claude não devolveu nada"));
       }
+      if (env.is_error) return reject(new Error(String(env.result).slice(0, 500)));
+      if (!env.result || !String(env.result).trim()) return reject(new Error("claude devolveu uma resposta vazia"));
+      resolve(env.result);
     });
     if (sinal) sinal.addEventListener("abort", () => p.kill("SIGTERM"), { once: true });
-    p.stdin.end(texto);
+    p.stdin.end(porStdin ? texto : "");
   });
+}
+
+async function viaClaudeCli(texto, { modelo = MODELO_PADRAO, sinal } = {}) {
+  // Windows e prompts muito longos vão por stdin; o resto, por argumento.
+  const primeiro = process.platform === "win32" || texto.length > 24000;
+  try {
+    return await chamarCli(texto, { modelo, sinal, porStdin: primeiro });
+  } catch (e) {
+    if (e.fatal || (sinal && sinal.aborted)) throw e;
+    console.log(cores.fraco(`   a CLI recusou o prompt ${primeiro ? "por stdin" : "como argumento"}; tentando a outra forma.`));
+    return chamarCli(texto, { modelo, sinal, porStdin: !primeiro });
+  }
 }
 
 async function viaAnthropic(texto, { modelo = "claude-sonnet-5", sinal } = {}) {

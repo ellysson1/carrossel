@@ -49,6 +49,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -678,6 +679,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
             <button class="btn principal" id="btnZip" type="button">Baixar tudo (.zip)</button>
             <button class="btn fantasma" id="btnPng" type="button">Baixar este slide</button>
             <button class="btn fantasma" id="btnCopiarLegenda" type="button">Copiar legenda</button>
+            <button class="btn fantasma" id="btnImagens" type="button" hidden>Gerar as imagens</button>
           </div>
           <div id="estadoExport" class="aviso" hidden style="margin-top:12px"></div>
           <h3 style="margin-top:18px">Legenda</h3>
@@ -1381,6 +1383,46 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   var caps = { sample: null, db: null, assets: null, downloads: null };
   var controle = null;
 
+  // ── backend: artifact publicado (capabilities) ou app local (servidor) ────
+  var local = null;        // dados do /api/ping quando rodando na sua máquina
+  var pastaLocal = null;   // pasta do carrossel aberto, no app local
+
+  function api(rota, opcoes) {
+    return fetch(rota, Object.assign({ headers: { "content-type": "application/json" } }, opcoes || {}))
+      .then(function (r) {
+        if (!r.ok) return r.text().then(function (t) { throw new Error((t || "").slice(0, 200) || ("HTTP " + r.status)); });
+        return r.status === 204 ? null : r.json();
+      });
+  }
+
+  function esperarTarefa(id, aoAndar) {
+    return new Promise(function (ok, falha) {
+      (function girar() {
+        api("/api/tarefas/" + id).then(function (t) {
+          if (aoAndar) aoAndar(t);
+          if (t.estado === "ok") return ok(t.resultado);
+          if (t.estado === "erro") return falha(new Error(t.erro));
+          setTimeout(girar, 1500);
+        }).catch(falha);
+      })();
+    });
+  }
+
+  function rodarTarefa(corpo, aoAndar) {
+    return api("/api/tarefas", { method: "POST", body: JSON.stringify(corpo) })
+      .then(function (r) { return esperarTarefa(r.id, aoAndar); });
+  }
+
+  function mostrarAndamento(alvo) {
+    return function (t) {
+      mostrarEstado(alvo, t.etapa, "");
+      var fl = $("fluxo");
+      fl.hidden = false;
+      fl.textContent = t.log.slice(-12).join("\n");
+      fl.scrollTop = fl.scrollHeight;
+    };
+  }
+
   // ── tema ────────────────────────────────────────────────────────────────
   $("btnTema").onclick = function () {
     var r = document.documentElement;
@@ -1423,7 +1465,13 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
   function urlDaImagem(ref) {
     if (!ref) return null;
-    return ref.url || ref.dataUrl || null;
+    // no app local o arquivo em disco manda: uma url antiga de upload pode estar morta
+    if (local && pastaLocal && ref.arquivo) {
+      return "/arquivos/" + encodeURIComponent(pastaLocal) + "/" + String(ref.arquivo).split("\\").join("/");
+    }
+    if (ref.url) return ref.url;
+    if (ref.dataUrl) return ref.dataUrl;
+    return null;
   }
 
   function opcoesLayout() {
@@ -1600,7 +1648,11 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
     var nota = document.createElement("span");
     nota.className = "dica";
-    nota.textContent = "A página não chama a Kie direto (o sandbox bloqueia rede). Gere pelo `carrossel imagens` ou pelo app da Kie e suba o arquivo aqui.";
+    nota.textContent = local
+      ? (local.temChaveImagem
+          ? "Use \u201cGerar as imagens\u201d para criar todas de uma vez pela " + local.provedorImagem + ", ou suba um arquivo seu aqui."
+          : "Sem chave no .env: suba um arquivo seu aqui, ou preencha KIE_API_KEY e reinicie o app.")
+      : "A página publicada não alcança a Kie. Copie o prompt, gere a imagem e suba o arquivo aqui.";
     box.appendChild(nota);
     return box;
   }
@@ -1685,16 +1737,31 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     };
 
     try {
-      var c = await caps.sample.json(P.carrossel(brand, opcoes), {
-        signal: controle.signal,
-        cache: false,
-        modelTier: "default",
-        onText: function (u) {
-          var el = $("fluxo");
-          el.textContent = u.text.slice(-1400);
-          el.scrollTop = el.scrollHeight;
-        }
-      });
+      var c;
+      if (local) {
+        var saida = await rodarTarefa({
+          acao: "gerar",
+          tema: opcoes.tema,
+          tipo: opcoes.tipo,
+          nSlides: opcoes.nSlides,
+          palavraCta: opcoes.palavraCta,
+          contexto: opcoes.contexto,
+          comImagem: local.temChaveImagem
+        }, mostrarAndamento($("estadoGeracao")));
+        pastaLocal = saida.pasta;
+        c = saida.carrossel;
+      } else {
+        c = await caps.sample.json(P.carrossel(brand, opcoes), {
+          signal: controle.signal,
+          cache: false,
+          modelTier: "default",
+          onText: function (u) {
+            var el = $("fluxo");
+            el.textContent = u.text.slice(-1400);
+            el.scrollTop = el.scrollHeight;
+          }
+        });
+      }
       c.meta = Object.assign({ tema: opcoes.tema, tipo: opcoes.tipo, palavraCta: opcoes.palavraCta }, c.meta || {});
       estado.carrossel = c;
       estado.indice = 0;
@@ -1721,7 +1788,13 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     var alvo = $("estadoGeracao");
     mostrarEstado(alvo, "Reescrevendo o slide " + (i + 1) + "…", "");
     try {
-      var novo = await caps.sample.json(P.slide(brand, estado.carrossel, i, null), { cache: false, modelTier: "default" });
+      var novo;
+      if (local) {
+        var r = await rodarTarefa({ acao: "slide", pasta: pastaLocal, indice: i }, mostrarAndamento(alvo));
+        novo = r.carrossel.slides[i];
+      } else {
+        novo = await caps.sample.json(P.slide(brand, estado.carrossel, i, null), { cache: false, modelTier: "default" });
+      }
       if (!novo.tipo) novo.tipo = estado.carrossel.slides[i].tipo;
       if (estado.carrossel.slides[i].imagem && !novo.imagem) novo.imagem = estado.carrossel.slides[i].imagem;
       if (novo.imagem && estado.carrossel.slides[i].imagem) {
@@ -1777,7 +1850,17 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   // ── histórico (db) ──────────────────────────────────────────────────────
 
   async function salvar() {
-    if (!caps.db || !estado.carrossel) return;
+    if (!estado.carrossel) return;
+    if (local) {
+      if (!pastaLocal) return;
+      try {
+        await api("/api/carrosseis/" + encodeURIComponent(pastaLocal), {
+          method: "PUT", body: JSON.stringify(estado.carrossel)
+        });
+      } catch (e) { /* salvar é conveniência, não bloqueia a edição */ }
+      return;
+    }
+    if (!caps.db) return;
     var corpo = {
       tema: (estado.carrossel.meta || {}).tema || "sem tema",
       tipo: (estado.carrossel.meta || {}).tipo || "",
@@ -1819,6 +1902,32 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     });
   }
 
+  async function historicoLocal() {
+    var lista = await api("/api/carrosseis").catch(function () { return []; });
+    var ul = $("historico");
+    ul.innerHTML = "";
+    $("semHistorico").hidden = lista.length > 0;
+    lista.forEach(function (item) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.innerHTML = "<strong></strong><span class='quando'></span>";
+      b.querySelector("strong").textContent = item.tema;
+      b.querySelector(".quando").textContent =
+        new Date(item.atualizadoEm).toLocaleDateString("pt-BR") + " · " + item.slides + " slides" + (item.temPng ? " · PNG pronto" : "");
+      b.onclick = async function () {
+        estado.carrossel = await api("/api/carrosseis/" + encodeURIComponent(item.pasta));
+        pastaLocal = item.pasta;
+        estado.indice = 0;
+        pintarTudo();
+        irParaODeck();
+        rodarLint(true);
+      };
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
   // ── exportação ──────────────────────────────────────────────────────────
 
   async function pngDoSlide(slide, indice, total) {
@@ -1838,8 +1947,32 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     return await new Promise(function (r) { canvas.toBlob(r, "image/png"); });
   }
 
+  async function exportarLocal(tudo) {
+    var alvo = $("estadoExport");
+    try {
+      await rodarTarefa({ acao: "render", pasta: pastaLocal, carrossel: estado.carrossel }, mostrarAndamento(alvo));
+      if (tudo) {
+        await api("/api/abrir", { method: "POST", body: JSON.stringify({ pasta: pastaLocal + "/png" }) });
+        mostrarEstado(alvo, "PNG atualizados. Abri a pasta no seu computador.", "ok");
+      } else {
+        var nome = String(estado.indice + 1).padStart(2, "0") + ".png";
+        var a = document.createElement("a");
+        a.href = "/arquivos/" + encodeURIComponent(pastaLocal) + "/png/" + nome + "?baixar";
+        a.download = nome;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        mostrarEstado(alvo, "Slide " + (estado.indice + 1) + " baixado.", "ok");
+      }
+      $("fluxo").hidden = true;
+    } catch (e) {
+      mostrarEstado(alvo, "Não deu para renderizar: " + e.message, "erro");
+    }
+  }
+
   async function exportar(tudo) {
     if (!estado.carrossel) return;
+    if (local) return exportarLocal(tudo);
     var alvo = $("estadoExport");
     if (!caps.downloads) {
       mostrarEstado(alvo, "Esta visualização não deixa a página entregar arquivos. Abra o artifact pelo claude.ai para exportar.", "alerta");
@@ -1875,6 +2008,24 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     }
   }
 
+  $("btnImagens").onclick = async function () {
+    var alvo = $("estadoExport");
+    $("btnImagens").disabled = true;
+    try {
+      var r = await rodarTarefa({ acao: "imagens", pasta: pastaLocal }, mostrarAndamento(alvo));
+      estado.carrossel = r.carrossel;
+      pintarTudo();
+      $("fluxo").hidden = true;
+      mostrarEstado(alvo, r.falhas && r.falhas.length
+        ? r.falhas.length + " imagem(ns) falharam; os outros slides já estão com foto."
+        : "Imagens geradas e PNG atualizados.", r.falhas && r.falhas.length ? "alerta" : "ok");
+    } catch (e) {
+      mostrarEstado(alvo, "Não deu para gerar as imagens: " + e.message, "erro");
+    } finally {
+      $("btnImagens").disabled = false;
+    }
+  };
+
   $("btnZip").onclick = function () { exportar(true); };
   $("btnPng").onclick = function () { exportar(false); };
   $("btnCopiarLegenda").onclick = function () {
@@ -1897,9 +2048,16 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     $("btnPararRoteiro").hidden = false;
     mostrarEstado($("estadoRoteiro"), "Escrevendo o roteiro…", "");
     try {
-      var r = await caps.sample.json(P.roteiro(brand, { tema: tema }), {
-        signal: controleRoteiro.signal, cache: false, modelTier: "default"
-      });
+      var r;
+      if (local) {
+        r = (await rodarTarefa({ acao: "roteiro", tema: tema }, function (t) {
+          mostrarEstado($("estadoRoteiro"), t.etapa, "");
+        })).roteiro;
+      } else {
+        r = await caps.sample.json(P.roteiro(brand, { tema: tema }), {
+          signal: controleRoteiro.signal, cache: false, modelTier: "default"
+        });
+      }
       estado.roteiro = r;
       pintarRoteiro();
       mostrarEstado($("estadoRoteiro"), "Roteiro pronto: cerca de " + (r.duracaoEstimadaSegundos || "?") + " segundos.", "ok");
@@ -1954,6 +2112,17 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   $("btnRoteiro").onclick = escreverRoteiro;
   $("btnPararRoteiro").onclick = function () { if (controleRoteiro) controleRoteiro.abort(); };
   $("btnBaixarRoteiro").onclick = async function () {
+    if (local) {
+      var blob = new Blob([textoDoRoteiro()], { type: "text/plain;charset=utf-8" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "roteiro.txt";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      return;
+    }
     if (!caps.downloads) { mostrarEstado($("estadoRoteiro"), "Exportação indisponível nesta visualização.", "alerta"); return; }
     try {
       await caps.downloads.save({ filename: "roteiro.txt", data: textoDoRoteiro() });
@@ -2006,7 +2175,34 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     chip.innerHTML = '<span class="ponto"></span>' + (ligado ? " Claude escreve aqui" : " Modo diagramador");
   }
 
+  function marcarChipLocal() {
+    var chip = $("chipIA");
+    chip.className = "chip ligado";
+    chip.innerHTML = '<span class="ponto"></span> App local' +
+      (local && local.temChaveImagem ? " · imagens ligadas" : " · sem chave de imagem");
+  }
+
   (async function iniciar() {
+    // 1. app local? o servidor responde /api/ping.
+    try {
+      local = await api("/api/ping");
+    } catch (e) { local = null; }
+
+    if (local && local.local) {
+      marcarChipLocal();
+      $("btnGerar").disabled = false;
+      $("btnRoteiro").disabled = false;
+      $("btnZip").textContent = "Renderizar e abrir a pasta";
+      $("btnImagens").hidden = !local.temChaveImagem;
+      if (!local.temChaveImagem) {
+        mostrarEstado($("estadoGeracao"),
+          "Sem chave de imagem no .env: o carrossel sai com fundo sólido. Preencha KIE_API_KEY e reinicie o app para ter fotos.", "alerta");
+      }
+      historicoLocal();
+      return;
+    }
+
+    // 2. artifact publicado.
     if (!window.claude || !window.claude.use) { marcarChip(false); $("btnGerar").disabled = true; return; }
     caps.sample = await window.claude.use("sample").catch(function () { return null; });
     caps.db = await window.claude.use("db").catch(function () { return null; });

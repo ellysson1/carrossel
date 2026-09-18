@@ -38,6 +38,7 @@ ${cores.forte("carrossel")} — gerador de carrosséis do @profellyssonrocha
   ${cores.forte("carrossel lint")} <pasta|arquivo.json>       confere o texto contra as regras da marca
   ${cores.forte("carrossel roteiro")} --tema "..."            roteiro de Reels cronometrado
   ${cores.forte("carrossel lote")} <arquivo>                  vários carrosséis de uma vez
+  ${cores.forte("carrossel app")}                             abre o app local no navegador
   ${cores.forte("carrossel doctor")}                          testa chaves, modelo e navegador
 
 Opções de geração:
@@ -285,6 +286,12 @@ async function principal() {
     case "render": await cmdRender(pastaDoAlvo(opts._[1])); break;
     case "roteiro": await cmdRoteiro(opts); break;
     case "lote": await cmdLote(opts._[1], opts); break;
+    case "app": {
+      const { subirServidor } = await import("../src/servidor.js");
+      await subirServidor({ porta: Number(opts.porta) || 4173, rede: !!opts.rede });
+      await new Promise(() => {});
+      break;
+    }
     case "doctor": await cmdDoctor(opts); break;
     case "lint": {
       const alvo = opts._[1];

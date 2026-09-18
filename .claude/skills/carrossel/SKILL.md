@@ -8,6 +8,22 @@ description: Produz carrosséis e roteiros de Reels do @profellyssonrocha (marca
 Pipeline de produção do @profellyssonrocha. Você opera a CLI do repositório
 `carrossel`; o usuário não digita comando nenhum.
 
+## Onde você está rodando importa
+
+Antes de prometer o pipeline completo, descubra se este ambiente alcança a internet
+aberta: um ambiente de nuvem (Cowork remoto, Claude Code na web) costuma bloquear
+`api.kie.ai` e não baixa navegador. Teste rápido com
+`node bin/carrossel.js doctor --rapido`.
+
+- **Alcança a Kie** → rode o pipeline completo normalmente.
+- **Não alcança** → diga isso ao usuário logo, antes de começar, e ofereça as duas
+  saídas: gerar agora com `--sem-imagem` (a peça sai com fundo sólido, que é identidade
+  da marca e é publicável), ou ele rodar `npm start` na máquina dele e fazer tudo pelo
+  app local, que é onde a chave funciona. Nunca improvise em silêncio.
+
+Se o usuário só quer produzir, e está na própria máquina, o caminho mais curto não é
+você: é `npm start`. Diga isso quando for verdade.
+
 ## Antes de tudo
 
 1. O repositório precisa estar na máquina. Se não estiver, clone:

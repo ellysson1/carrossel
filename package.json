@@ -10,7 +10,9 @@
   "scripts": {
     "carrossel": "node bin/carrossel.js",
     "build:artifact": "node scripts/build-artifact.js",
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "start": "npm run build:artifact && node bin/carrossel.js app",
+    "app": "node bin/carrossel.js app"
   },
   "engines": {
     "node": ">=20"
