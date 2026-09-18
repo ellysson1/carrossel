@@ -54,9 +54,12 @@ if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path ".git")) {
     if ($estado) { git checkout -- $gerado 2>$null }
   }
 
-  $sujo = (git status --porcelain 2>$null | Measure-Object).Count
+  # arquivo novo que voce colocou na pasta (--untracked-files=no) nao impede o pull:
+  # so alteracao em arquivo do projeto impede
+  $sujo = (git status --porcelain --untracked-files=no 2>$null | Measure-Object).Count
   if ($sujo -gt 0) {
-    Write-Host "  Voce tem alteracoes locais nao salvas: pulei a atualizacao." -ForegroundColor Yellow
+    Write-Host "  Voce alterou arquivos do projeto: pulei a atualizacao." -ForegroundColor Yellow
+    git status --short --untracked-files=no 2>$null | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
   } else {
     $antes = (git rev-parse HEAD 2>$null)
     git pull --ff-only 2>&1 | Out-Null

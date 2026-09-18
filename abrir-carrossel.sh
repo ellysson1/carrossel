@@ -12,7 +12,7 @@ fi
 if command -v git >/dev/null 2>&1 && [ -d .git ]; then
   # o app regera este arquivo a cada subida: restaura antes de comparar
   [ -n "$(git status --porcelain -- artifact/index.html 2>/dev/null)" ] && git checkout -- artifact/index.html 2>/dev/null
-  if [ -z "$(git status --porcelain)" ]; then
+  if [ -z "$(git status --porcelain --untracked-files=no)" ]; then
     antes=$(git rev-parse HEAD)
     if git pull --ff-only >/dev/null 2>&1; then
       depois=$(git rev-parse HEAD)
@@ -21,7 +21,7 @@ if command -v git >/dev/null 2>&1 && [ -d .git ]; then
       echo "Não consegui atualizar agora. Seguindo com a versão local."
     fi
   else
-    echo "Você tem alterações locais: pulei a atualização."
+    echo "Você alterou arquivos do projeto: pulei a atualização."
   fi
 fi
 
