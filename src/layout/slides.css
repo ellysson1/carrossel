@@ -229,7 +229,8 @@
 
 /* ── imagem interna ───────────────────────────────────────────────────────── */
 
-.slide .figura { margin: 0; flex: 0 0 auto; }
+/* a moldura corta a foto ampliada; o raio fica nela, não na foto */
+.slide .figura { margin: 0; flex: 0 0 auto; overflow: hidden; border-radius: 8px; }
 
 .slide .figura .foto {
   width: 100%;

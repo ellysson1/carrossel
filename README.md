@@ -61,6 +61,16 @@ teclado.
 ordem dos slides, foto, prompt. No celular, os botões ↶ ↷ no topo do deck fazem o mesmo.
 O histórico é do carrossel aberto; abrir outro começa do zero.
 
+**A foto se enquadra arrastando.** Na capa e no slide de imagem, arraste a foto dentro
+do quadro para escolher o que aparece; roda do mouse ou pinça dá zoom, e os botões − +
+ao lado do editor fazem o mesmo. **Redefinir** volta ao centro. O enquadramento vai para
+o JSON (`imagem.enquadramento`) e o PNG sai igual — na CLI e na exportação do app.
+
+**Slides.** No topo do editor: **+ Slide** cria um depois do atual (antes do CTA, se você
+estiver nele), **Duplicar** copia, **Apagar** remove, e o seletor ao lado do número **troca
+o tipo** — o que dá para aproveitar é aproveitado, o obrigatório entra com um modelo para
+você reescrever. Nada pede confirmação: errou, Ctrl+Z.
+
 Tudo o que você muda aí vai para o mesmo `carrossel.json` que a CLI renderiza. Os
 campos da lateral continuam valendo para o que não aparece no slide (fonte, crédito,
 etiqueta) e para colar texto longo.

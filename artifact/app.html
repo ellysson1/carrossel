@@ -178,6 +178,13 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 .barra-texto button:hover { background: var(--superficie-2); }
 .barra-texto .amarelo { background: var(--ambar); color: #2A1F00; }
 .barra-texto .amarelo:hover { filter: brightness(0.95); background: var(--ambar); }
+
+/* a foto do palco se arrasta; touch-action none para o dedo não rolar a página */
+#molduraPalco [data-enquadravel] { cursor: grab; touch-action: none; }
+#molduraPalco [data-enquadravel].arrastando { cursor: grabbing; }
+.controle-foto { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -4px 0 12px; }
+.controle-foto .dica { flex: 1 1 200px; }
+.editor-topo .tipo-slide select { font: inherit; font-weight: 800; padding: 4px 6px; border-radius: 7px; margin-left: 4px; width: auto; }
 .btn.largo { width: 100%; }
 
 .aviso { font-size: 13px; border-radius: 9px; padding: 10px 12px; border: 1px solid var(--borda); background: var(--superficie-2); }
@@ -847,7 +854,21 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
     var topo = document.createElement("div");
     topo.className = "editor-topo";
-    topo.innerHTML = '<span class="tipo-slide">Slide ' + (estado.indice + 1) + " · " + L.esc(s.tipo) + "</span>";
+    var rotulo = document.createElement("span");
+    rotulo.className = "tipo-slide";
+    rotulo.textContent = "Slide " + (estado.indice + 1) + " \u00b7 ";
+    var selTipo = document.createElement("select");
+    selTipo.setAttribute("aria-label", "Tipo do slide");
+    L.TIPOS.forEach(function (tp) {
+      var o = document.createElement("option");
+      o.value = tp;
+      o.textContent = tp;
+      o.selected = tp === s.tipo;
+      selTipo.appendChild(o);
+    });
+    selTipo.onchange = function () { trocarTipoDoSlide(selTipo.value); };
+    rotulo.appendChild(selTipo);
+    topo.appendChild(rotulo);
     var acoes = document.createElement("div");
     acoes.className = "linha";
     acoes.style.flex = "0 0 auto";
@@ -871,8 +892,23 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     bRe.onclick = regerarSlide;
     bRe.disabled = !(caps.sample || local);
     acoes.appendChild(bRe);
+
+    [["+ Slide", "Novo slide depois deste", novoSlide, false],
+     ["Duplicar", "Duplicar este slide", duplicarSlide, false],
+     ["Apagar", "Apagar este slide", apagarSlide, total <= 1]
+    ].forEach(function (d) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn fantasma pequeno";
+      b.textContent = d[0];
+      b.title = d[1];
+      b.disabled = d[3];
+      b.onclick = d[2];
+      acoes.appendChild(b);
+    });
     topo.appendChild(acoes);
     ed.appendChild(topo);
+    if ((s.tipo === "capa" || s.tipo === "imagem") && urlDaImagem(s.imagem)) ed.appendChild(controleDeFoto(s));
 
     var dica = document.createElement("p");
     dica.className = "dica";
@@ -1043,6 +1079,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     if (!s) return;
     pintarMoldura($("molduraPalco"), s, estado.indice + 1, lista.length);
     ligarEdicaoDireta($("molduraPalco"));
+    ligarEnquadramento($("molduraPalco"));
     var thumb = $("tira").children[estado.indice];
     if (thumb) pintarMoldura(thumb.querySelector(".moldura"), s, estado.indice + 1, lista.length);
   }
@@ -1196,6 +1233,254 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     b.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
     b.addEventListener("click", function () { aplicarMarca(b.getAttribute("data-marca")); });
   });
+
+  // ── enquadrar a foto: arrastar posiciona, roda ou pinça dá zoom ──────────
+  //
+  // O motor desenha a foto com background-position (que ponto fica visível)
+  // e transform: scale em torno desse ponto. Aqui o gesto mexe nesses dois
+  // números, ao vivo no DOM, e grava no JSON quando o dedo solta.
+
+  var enq = null;                 // gesto em andamento
+  var rodaTimer = null;
+  var tamanhosDeImagem = {};      // url → {w, h}, para o arrasto seguir o dedo 1:1
+
+  function numero(v, padrao) { var n = Number(v); return isFinite(n) ? n : padrao; }
+  function limitar(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  function fundoDe(el) {
+    var m = /url\("?(.*?)"?\)/.exec(el.style.backgroundImage || "");
+    return m ? m[1] : "";
+  }
+
+  function medirImagem(url) {
+    if (!url || tamanhosDeImagem[url]) return;
+    var im = new Image();
+    im.onload = function () { tamanhosDeImagem[url] = { w: im.naturalWidth, h: im.naturalHeight }; };
+    im.src = url;
+  }
+
+  function enquadramentoAtual(s) {
+    var e = (s && s.imagem && s.imagem.enquadramento) || {};
+    return { x: numero(e.x, 50), y: numero(e.y, 50), zoom: limitar(numero(e.zoom, 1), 1, 4) };
+  }
+
+  function aplicarEnquadramentoNoDom(el, e) {
+    el.style.backgroundPosition = e.x + "% " + e.y + "%";
+    el.style.transform = "scale(" + e.zoom + ")";
+    el.style.transformOrigin = e.x + "% " + e.y + "%";
+  }
+
+  // Quanto o x/y anda (em %) por pixel de tela arrastado. Dois lugares dão
+  // folga para a foto andar: a sobra do cover (o que fica fora da caixa) e,
+  // com zoom, o próprio transform-origin — mover o ponto de ampliação é
+  // mover a parte ampliada. Sem folga nenhuma, o arrasto não faz nada.
+  function passosDePan(el, zoom) {
+    var r = el.getBoundingClientRect();
+    var boxW = r.width / zoom, boxH = r.height / zoom;
+    var nat = tamanhosDeImagem[fundoDe(el)];
+    var sobraX = 0, sobraY = 0;
+    if (nat && boxW && boxH) {
+      var k = Math.max(boxW / nat.w, boxH / nat.h);        // cover
+      sobraX = nat.w * k - boxW;
+      sobraY = nat.h * k - boxH;
+    }
+    var folgaX = sobraX * zoom + (zoom - 1) * boxW;
+    var folgaY = sobraY * zoom + (zoom - 1) * boxH;
+    return { x: folgaX > 0.5 ? 100 / folgaX : 0, y: folgaY > 0.5 ? 100 / folgaY : 0 };
+  }
+
+  function distanciaEntre(ponteiros) {
+    var ids = Object.keys(ponteiros);
+    var a = ponteiros[ids[0]], b = ponteiros[ids[1]];
+    return Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  }
+
+  function gravarEnquadramento(e) {
+    var s = slideEmEdicao();
+    if (!s) return;
+    s.imagem = s.imagem || {};
+    if (e) s.imagem.enquadramento = { x: Math.round(e.x * 10) / 10, y: Math.round(e.y * 10) / 10, zoom: Math.round(e.zoom * 100) / 100 };
+    else delete s.imagem.enquadramento;
+    atualizarPalco();
+    pintarEditor();
+    salvar();
+  }
+
+  function aoPegarFoto(ev) {
+    if (ev.pointerType !== "touch" && ev.button !== 0) return;
+    var s = slideEmEdicao();
+    if (!s) return;
+    var el = ev.currentTarget;
+    if (!enq || enq.el !== el) enq = { el: el, ponteiros: {}, atual: enquadramentoAtual(s), mexeu: false };
+    enq.ponteiros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    if (Object.keys(enq.ponteiros).length === 2) {
+      enq.pinca = { dist: distanciaEntre(enq.ponteiros), zoom: enq.atual.zoom };
+      enq.inicio = null;
+    } else {
+      enq.inicio = { x: ev.clientX, y: ev.clientY, x0: enq.atual.x, y0: enq.atual.y };
+    }
+    try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ponteiro já solto */ }
+    el.classList.add("arrastando");
+    ev.preventDefault();
+  }
+
+  function aoArrastarFoto(ev) {
+    if (!enq || !enq.ponteiros[ev.pointerId]) return;
+    enq.ponteiros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    ev.preventDefault();
+    if (enq.pinca && Object.keys(enq.ponteiros).length >= 2) {
+      enq.atual.zoom = limitar(enq.pinca.zoom * (distanciaEntre(enq.ponteiros) / enq.pinca.dist), 1, 4);
+      enq.mexeu = true;
+    } else if (enq.inicio) {
+      var dx = ev.clientX - enq.inicio.x, dy = ev.clientY - enq.inicio.y;
+      if (!enq.mexeu && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+      enq.mexeu = true;
+      var passo = passosDePan(enq.el, enq.atual.zoom);
+      enq.atual.x = limitar(enq.inicio.x0 - dx * passo.x, 0, 100);
+      enq.atual.y = limitar(enq.inicio.y0 - dy * passo.y, 0, 100);
+    }
+    aplicarEnquadramentoNoDom(enq.el, enq.atual);
+  }
+
+  function aoSoltarFoto(ev) {
+    if (!enq || !enq.ponteiros[ev.pointerId]) return;
+    delete enq.ponteiros[ev.pointerId];
+    var restam = Object.keys(enq.ponteiros);
+    if (restam.length === 1) {                       // pinça virou arrasto de um dedo
+      var pt = enq.ponteiros[restam[0]];
+      enq.pinca = null;
+      enq.inicio = { x: pt.x, y: pt.y, x0: enq.atual.x, y0: enq.atual.y };
+      return;
+    }
+    if (restam.length) return;
+    var a = enq;
+    enq = null;
+    a.el.classList.remove("arrastando");
+    if (a.mexeu) gravarEnquadramento(a.atual);
+  }
+
+  function aoRolarNaFoto(ev) {
+    var s = slideEmEdicao();
+    if (!s) return;
+    ev.preventDefault();
+    var e = enquadramentoAtual(s);
+    e.zoom = limitar(e.zoom * (ev.deltaY < 0 ? 1.08 : 1 / 1.08), 1, 4);
+    aplicarEnquadramentoNoDom(ev.currentTarget, e);
+    s.imagem = s.imagem || {};
+    s.imagem.enquadramento = e;                      // ao vivo; grava quando a roda para
+    clearTimeout(rodaTimer);
+    rodaTimer = setTimeout(function () { gravarEnquadramento(e); }, 450);
+  }
+
+  function ligarEnquadramento(moldura) {
+    var fotos = moldura.querySelectorAll("[data-enquadravel]");
+    for (var i = 0; i < fotos.length; i++) {
+      var el = fotos[i];
+      el.addEventListener("pointerdown", aoPegarFoto);
+      el.addEventListener("pointermove", aoArrastarFoto);
+      el.addEventListener("pointerup", aoSoltarFoto);
+      el.addEventListener("pointercancel", aoSoltarFoto);
+      el.addEventListener("wheel", aoRolarNaFoto, { passive: false });
+      medirImagem(fundoDe(el));
+    }
+  }
+
+  function controleDeFoto(s) {
+    var box = document.createElement("div");
+    box.className = "controle-foto";
+    var dica = document.createElement("span");
+    dica.className = "dica";
+    dica.textContent = "Arraste a foto no slide para enquadrar. Roda do mouse ou pinça dá zoom.";
+    box.appendChild(dica);
+    var e = enquadramentoAtual(s);
+    [["\u2212", "Menos zoom", function () { e.zoom = limitar(e.zoom / 1.15, 1, 4); gravarEnquadramento(e); }],
+     ["+", "Mais zoom", function () { e.zoom = limitar(e.zoom * 1.15, 1, 4); gravarEnquadramento(e); }]
+    ].forEach(function (d) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn fantasma pequeno icone";
+      b.textContent = d[0];
+      b.title = d[1];
+      b.setAttribute("aria-label", d[1]);
+      b.onclick = d[2];
+      box.appendChild(b);
+    });
+    var z = document.createElement("span");
+    z.className = "dica";
+    z.style.flex = "0 0 auto";
+    z.textContent = Math.round(e.zoom * 100) + "%";
+    box.appendChild(z);
+    var r = document.createElement("button");
+    r.type = "button";
+    r.className = "btn fantasma pequeno";
+    r.textContent = "Redefinir";
+    r.disabled = !(s.imagem && s.imagem.enquadramento);
+    r.onclick = function () { gravarEnquadramento(null); };
+    box.appendChild(r);
+    return box;
+  }
+
+  // ── slides: novo, duplicar, apagar, trocar o tipo ─────────────────────────
+  //
+  // Com desfazer, apagar não precisa de confirmação. Trocar o tipo preserva
+  // o que dá para preservar e preenche o obrigatório com um modelo, para o
+  // slide nunca nascer vazio.
+
+  var MODELO = {
+    titulo: "Título do slide", corpo: "Escreva aqui o texto de apoio.", texto: "A frase-tese deste slide.",
+    faixa: "Faixa", gancho: "A pergunta que segura o dedo.", itens: ["Primeiro ponto", "Segundo ponto"],
+    passos: [{ titulo: "Primeiro passo", texto: "Uma linha sobre ele." }], valor: "0", unidade: "UNIDADE",
+    dados: [{ rotulo: "Item", valor: 1, exibicao: "1", destaque: true }],
+    destaque: "segunda linha", acao: "Comenta **PALAVRA** que eu te mando na DM."
+  };
+
+  function vazio(v) { return v == null || v === "" || (Array.isArray(v) && !v.length); }
+
+  function modelo(campo) {
+    var v = MODELO[campo];
+    if (campo === "acao") return v.replace("PALAVRA", ((estado.carrossel.meta || {}).palavraCta) || "CONTROLE");
+    return typeof v === "string" ? v : copiaProfunda(v);
+  }
+
+  function converterSlide(s, tipo) {
+    var n = Object.assign({}, s, { tipo: tipo });
+    // pontes entre campos irmãos, para o texto não sumir na troca
+    if (tipo === "tese" && vazio(n.texto) && !vazio(n.corpo)) n.texto = n.corpo;
+    if (s.tipo === "tese" && tipo !== "tese" && vazio(n.corpo) && !vazio(n.texto)) n.corpo = n.texto;
+    if (tipo === "faixa" && vazio(n.faixa) && !vazio(n.titulo)) n.faixa = n.titulo;
+    if (s.tipo === "faixa" && tipo !== "faixa" && vazio(n.titulo) && !vazio(n.faixa)) n.titulo = n.faixa;
+    (V.OBRIGATORIOS[tipo] || []).forEach(function (c) { if (vazio(n[c])) n[c] = modelo(c); });
+    return n;
+  }
+
+  function inserirSlide(s) {
+    var slides = estado.carrossel.slides;
+    var pos = estado.indice + 1;
+    if (slides[estado.indice] && slides[estado.indice].tipo === "cta") pos = estado.indice; // o CTA fica por último
+    slides.splice(pos, 0, s);
+    estado.indice = pos;
+    pintarTudo();
+    salvar();
+  }
+
+  function novoSlide() { inserirSlide(converterSlide({}, "texto")); }
+  function duplicarSlide() { inserirSlide(copiaProfunda(estado.carrossel.slides[estado.indice])); }
+
+  function apagarSlide() {
+    var slides = estado.carrossel.slides;
+    if (slides.length <= 1) return;
+    slides.splice(estado.indice, 1);
+    estado.indice = Math.min(estado.indice, slides.length - 1);
+    pintarTudo();
+    salvar();
+  }
+
+  function trocarTipoDoSlide(tipo) {
+    var slides = estado.carrossel.slides;
+    slides[estado.indice] = converterSlide(slides[estado.indice], tipo);
+    pintarTudo();
+    salvar();
+  }
 
   function pintarTudo() {
     if (!estado.carrossel) return;

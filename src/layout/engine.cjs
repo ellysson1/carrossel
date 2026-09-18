@@ -65,10 +65,24 @@
 
   /* Imagens entram como background-image: é o que renderiza igual no
      Playwright e na captura do artifact (object-fit não sobrevive à captura). */
-  function foto(src, classe) {
+  /* opcoes.enquadravel marca a foto que o app deixa arrastar; opcoes.enquadramento
+     = {x, y, zoom} diz que ponto fica visível e quanto ampliar em torno dele. */
+  function foto(src, classe, opcoes) {
     if (!src) return "";
+    var o = opcoes || {};
     var limpa = String(src).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    return '<div class="' + classe + '" style="background-image:url(\'' + limpa + '\')"></div>';
+    var estilo = "background-image:url('" + limpa + "')";
+    var e = o.enquadramento;
+    if (e) {
+      var x = numero(e.x, 50), y = numero(e.y, 50), z = Math.max(1, numero(e.zoom, 1));
+      estilo += ";background-position:" + x + "% " + y + "%;transform:scale(" + z + ");transform-origin:" + x + "% " + y + "%";
+    }
+    return '<div class="' + classe + '"' + (o.enquadravel ? ' data-enquadravel="1"' : "") + ' style="' + estilo + '"></div>';
+  }
+
+  function numero(v, padrao) {
+    var n = Number(v);
+    return isFinite(n) ? n : padrao;
   }
 
   /**
@@ -102,7 +116,7 @@
           ? foto(ctx.logo, "selo-logo")
           : '<div class="selo-marca">' + esc(ctx.seloTexto || "NC") + "</div>";
       return (
-        foto(capa, "capa-img") +
+        foto(capa, "capa-img", { enquadravel: true, enquadramento: s.imagem && s.imagem.enquadramento }) +
         '<div class="capa-veu"></div>' +
         '<div class="corpo base">' +
           '<div class="selo">' + selo + '<span class="selo-nome">' + esc(ctx.handle) + "</span></div>" +
@@ -132,7 +146,7 @@
           (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           (src
             ? '<figure class="figura' + (s.retrato ? " retrato" : "") + '">' +
-                foto(src, "foto") +
+                foto(src, "foto", { enquadravel: true, enquadramento: s.imagem && s.imagem.enquadramento }) +
                 (s.credito ? "<figcaption" + campo("credito") + ">" + esc(s.credito) + "</figcaption>" : "") +
               "</figure>"
             : "") +
