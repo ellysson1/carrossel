@@ -369,7 +369,8 @@ async function rotear(req, res) {
 
 // ── subida ───────────────────────────────────────────────────────────────────
 
-export async function subirServidor({ porta = 4173, rede = false } = {}) {
+export async function subirServidor({ porta: portaPedida = 4173, rede = false } = {}) {
+  let porta = portaPedida;
   const servidor = http.createServer((req, res) => {
     rotear(req, res).catch((e) => {
       console.error(cores.erro(`erro em ${req.url}: ${e.message}`));
@@ -377,9 +378,29 @@ export async function subirServidor({ porta = 4173, rede = false } = {}) {
     });
   });
 
-  PORTA_ATUAL = porta;
   const host = rede ? "0.0.0.0" : "127.0.0.1";
-  await new Promise((r) => servidor.listen(porta, host, r));
+
+  // porta ocupada (outra janela do app aberta, por exemplo): tenta as seguintes
+  let tentativa = porta;
+  for (let i = 0; i < 10; i++) {
+    try {
+      await new Promise((ok, falha) => {
+        const erro = (e) => falha(e);
+        servidor.once("error", erro);
+        servidor.listen(tentativa, host, () => { servidor.off("error", erro); ok(); });
+      });
+      break;
+    } catch (e) {
+      if (e.code !== "EADDRINUSE" || i === 9) {
+        console.log(cores.erro(`\nNão consegui abrir a porta ${tentativa}: ${e.message}`));
+        throw e;
+      }
+      console.log(cores.fraco(`  porta ${tentativa} ocupada, tentando ${tentativa + 1}…`));
+      tentativa++;
+    }
+  }
+  porta = tentativa;
+  PORTA_ATUAL = porta;
 
   console.log("");
   console.log(cores.forte("Carrossel No Controle") + cores.fraco(" — app local"));
