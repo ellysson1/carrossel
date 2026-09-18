@@ -8,7 +8,22 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -d node_modules ]; then
+# o app se atualiza sozinho; falha de rede ou alteração local nunca impede de abrir
+if command -v git >/dev/null 2>&1 && [ -d .git ]; then
+  if [ -z "$(git status --porcelain)" ]; then
+    antes=$(git rev-parse HEAD)
+    if git pull --ff-only >/dev/null 2>&1; then
+      depois=$(git rev-parse HEAD)
+      [ "$antes" != "$depois" ] && echo "Atualizado: $(git rev-list --count "$antes..$depois") novidade(s)."
+    else
+      echo "Não consegui atualizar agora. Seguindo com a versão local."
+    fi
+  else
+    echo "Você tem alterações locais: pulei a atualização."
+  fi
+fi
+
+if [ ! -d node_modules ] || [ package-lock.json -nt node_modules ]; then
   echo "Primeira vez: instalando o que o app precisa."
   npm install && npx playwright install chromium || exit 1
 fi

@@ -20,6 +20,12 @@ O atalho aponta para o `powershell.exe` com o `Abrir-Carrossel.ps1` — não dep
 associação de arquivo `.cmd` nem de política de execução, que é onde o duplo clique
 costuma falhar no Windows.
 
+**O app se atualiza sozinho.** Toda vez que você abre, ele busca a versão nova antes de
+subir, e instala dependências novas se alguma tiver mudado. Você não precisa dar `git
+pull` nem usar o GitHub Desktop. Se a internet estiver fora, ou se você tiver mexido em
+algum arquivo do projeto, ele avisa e abre com a versão que já está no disco — atualizar
+nunca impede de usar.
+
 **Mac e Linux.** `./abrir-carrossel.sh` faz o mesmo.
 
 **Pelo terminal**, se preferir: `npm start` (ou `npm start -- --rede`).

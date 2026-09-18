@@ -41,13 +41,53 @@ if (-not (Test-Path "package.json")) {
   Fim
 }
 
+# --- atualizacao automatica --------------------------------------------------
+# O app se atualiza sozinho ao abrir. Se a internet estiver fora, se houver
+# alteracao sua sem salvar, ou se o git nao estiver instalado, ele apenas avisa
+# e continua com a versao que ja esta no disco: atualizar nunca impede de usar.
+if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path ".git")) {
+  Passo "Procurando atualizacoes..."
+  $sujo = (git status --porcelain 2>$null | Measure-Object).Count
+  if ($sujo -gt 0) {
+    Write-Host "  Voce tem alteracoes locais nao salvas: pulei a atualizacao." -ForegroundColor Yellow
+  } else {
+    $antes = (git rev-parse HEAD 2>$null)
+    git pull --ff-only 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      $depois = (git rev-parse HEAD 2>$null)
+      if ($antes -ne $depois) {
+        $quantas = (git rev-list --count "$antes..$depois" 2>$null)
+        Write-Host "  Atualizado: $quantas novidade(s)." -ForegroundColor Green
+        git log --oneline "$antes..$depois" 2>$null | Select-Object -First 3 | ForEach-Object {
+          Write-Host "    $_" -ForegroundColor DarkGray
+        }
+      } else {
+        Passo "Ja esta na versao mais nova."
+      }
+    } else {
+      Write-Host "  Nao consegui atualizar agora (sem internet?). Seguindo com a versao local." -ForegroundColor Yellow
+    }
+  }
+}
+
 # --- dependencias ------------------------------------------------------------
-if (-not (Test-Path "node_modules")) {
-  Titulo "Primeira vez: instalando o que o app precisa. Leva alguns minutos."
+$precisaInstalar = -not (Test-Path "node_modules")
+if (-not $precisaInstalar -and (Test-Path "package-lock.json")) {
+  $lock = (Get-Item "package-lock.json").LastWriteTime
+  $mods = (Get-Item "node_modules").LastWriteTime
+  if ($lock -gt $mods) {
+    Passo "As dependencias mudaram na atualizacao: instalando as novas."
+    $precisaInstalar = $true
+  }
+}
+
+if ($precisaInstalar) {
+  Titulo "Instalando o que o app precisa. Na primeira vez leva alguns minutos."
   npm install
   if ($LASTEXITCODE -ne 0) { Erro "A instalacao das dependencias falhou (npm install)."; Fim }
   npx playwright install chromium
   if ($LASTEXITCODE -ne 0) { Erro "O navegador de renderizacao nao baixou (playwright)."; Fim }
+  if (Test-Path "node_modules") { (Get-Item "node_modules").LastWriteTime = Get-Date }
 }
 
 # --- .env --------------------------------------------------------------------
