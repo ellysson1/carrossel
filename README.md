@@ -40,6 +40,24 @@ Na tela: escreve o tema, clica em **Escrever carrossel**, e a máquina faz o res
 texto, imagens, PNG 1080×1350 — mostrando cada etapa. Revisa, corrige a frase que
 quiser, e **Renderizar e abrir a pasta** deixa os arquivos prontos no Explorer.
 
+### Ajustar na mão
+
+O slide grande é editável: **clique em qualquer texto dele e digite ali mesmo**.
+Enter fecha a edição, Shift+Enter quebra a linha, Esc desiste. O texto se reajusta
+enquanto você digita, então nada é cortado.
+
+Um detalhe da marcação: quando o campo tem `**palavra**`, ele mostra os asteriscos
+enquanto está em edição e volta a desenhar o retângulo amarelo quando você sai.
+É como você acrescenta ou tira o destaque sem sair do slide.
+
+Para **trocar a ordem**, arraste as miniaturas. No celular — onde arrastar é rolar a
+tira — use os botões ◀ ▶ ao lado de *Regerar este slide*; eles também funcionam pelo
+teclado.
+
+Tudo o que você muda aí vai para o mesmo `carrossel.json` que a CLI renderiza. Os
+campos da lateral continuam valendo para o que não aparece no slide (fonte, crédito,
+etiqueta) e para colar texto longo.
+
 ### No celular
 
 **Em casa, no mesmo Wi-Fi.** Clique em **Abrir no celular** na barra de cima: aparece um

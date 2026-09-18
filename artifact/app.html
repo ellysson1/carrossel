@@ -162,6 +162,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 .btn.principal { background: var(--ambar); color: #2A1F00; }
 .btn.fantasma { background: transparent; color: var(--tinta); border-color: var(--borda); }
 .btn.pequeno { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+.btn.icone { flex: 0 0 auto; min-width: 36px; padding: 6px 9px; line-height: 1; }
 .btn.largo { width: 100%; }
 
 .aviso { font-size: 13px; border-radius: 9px; padding: 10px 12px; border: 1px solid var(--borda); background: var(--superficie-2); }
@@ -189,6 +190,17 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
 .moldura { position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 10px; background: var(--marinho); }
 .moldura > .slide { position: absolute; top: 0; left: 0; transform-origin: top left; }
+
+/* clicar no texto do slide e digitar ali mesmo */
+#molduraPalco [data-campo] { cursor: text; }
+#molduraPalco [data-campo]:hover { outline: 5px dashed currentColor; outline-offset: 6px; border-radius: 3px; }
+#molduraPalco [data-campo]:focus {
+  outline: 6px solid var(--ambar); outline-offset: 6px; border-radius: 3px;
+}
+
+.thumb.arrastando { opacity: .45; }
+.thumb.alvo { border-color: var(--ambar); box-shadow: 0 0 0 3px rgba(245, 200, 66, .35); }
+.tira.reordenando .thumb { cursor: grabbing; }
 
 .palco { display: grid; gap: 16px; }
 @media (min-width: 1000px) { .palco { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; } }
@@ -535,10 +547,216 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     encaixar(moldura);
   }
 
+  // ── edição direta: clicar no texto do slide e digitar ali ────────────────
+  //
+  // O motor marca cada texto com data-campo (o caminho dentro do slide) e
+  // data-rico (o campo aceita **amarelo** e *negrito*). Aqui os dois se ligam:
+  // o que você digita no slide vai para o mesmo JSON que a CLI renderiza.
+
+  function slideEmEdicao() {
+    return ((estado.carrossel && estado.carrossel.slides) || [])[estado.indice] || null;
+  }
+
+  function partesDoCaminho(caminho) {
+    return String(caminho).split(".").map(function (x) { return /^\d+$/.test(x) ? Number(x) : x; });
+  }
+
+  function lerCampo(slide, caminho) {
+    var partes = partesDoCaminho(caminho);
+    var alvo = slide;
+    for (var i = 0; i < partes.length; i++) {
+      if (alvo == null || typeof alvo !== "object") return "";
+      alvo = alvo[partes[i]];
+    }
+    return alvo == null ? "" : String(alvo);
+  }
+
+  function escreverCampo(slide, caminho, valor) {
+    var partes = partesDoCaminho(caminho);
+    var alvo = slide;
+    for (var i = 0; i < partes.length - 1; i++) {
+      var atual = alvo[partes[i]];
+      // um passo escrito como string vira objeto quando você edita o título dele
+      if (atual == null || typeof atual !== "object") {
+        alvo[partes[i]] = typeof partes[i + 1] === "number" ? [] : {};
+      }
+      alvo = alvo[partes[i]];
+    }
+    alvo[partes[partes.length - 1]] = valor;
+  }
+
+  function textoEditado(el) {
+    var bruto = el.innerText != null ? el.innerText : el.textContent;
+    return String(bruto)
+      .replace(/\u00a0/g, " ")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]+$/gm, "")
+      .trim();
+  }
+
+  function pintarCampo(el, valor) {
+    el.innerHTML = el.hasAttribute("data-rico") ? L.rico(valor) : L.esc(valor);
+  }
+
+  function aoFocarCampo(e) {
+    var el = e.currentTarget;
+    var slide = slideEmEdicao();
+    if (!slide) return;
+    var cru = lerCampo(slide, el.getAttribute("data-campo"));
+    // com marcação escondida, mostra os asteriscos para poder editá-los;
+    // sem marcação o DOM fica como está e o cursor cai onde você clicou
+    if (el.hasAttribute("data-rico") && cru.indexOf("*") >= 0 && textoEditado(el) !== cru) {
+      el.textContent = cru;
+    }
+  }
+
+  function aoDigitarCampo(e) {
+    var slide = e.currentTarget.closest(".slide");
+    if (slide) L.ajustar(slide);
+  }
+
+  function aoColarCampo(e) {
+    var dados = e.clipboardData || window.clipboardData;
+    if (!dados) return;
+    e.preventDefault();
+    document.execCommand("insertText", false, String(dados.getData("text") || "").replace(/\r\n?/g, "\n"));
+  }
+
+  function aoTeclarCampo(e) {
+    if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }
+
+  function aoSairDoCampo(e) {
+    var el = e.currentTarget;
+    var slide = slideEmEdicao();
+    if (!slide) return;
+    var caminho = el.getAttribute("data-campo");
+    var antigo = lerCampo(slide, caminho);
+    var novo = textoEditado(el);
+    pintarCampo(el, novo);
+    var moldura = el.closest(".slide");
+    if (moldura) L.ajustar(moldura);
+    if (novo === antigo) return;
+
+    escreverCampo(slide, caminho, novo);
+    // bullet esvaziado sai da lista — e aí os índices do palco mudam
+    var encolheu = false;
+    if (Array.isArray(slide.itens)) {
+      var cheios = slide.itens.filter(function (x) { return String(x == null ? "" : x).trim(); });
+      if (cheios.length !== slide.itens.length) { slide.itens = cheios; encolheu = true; }
+    }
+    if (encolheu) {
+      atualizarPalco();
+    } else {
+      var lista = slidesComFundo();
+      var thumb = $("tira").children[estado.indice];
+      if (thumb) pintarMoldura(thumb.querySelector(".moldura"), lista[estado.indice], estado.indice + 1, lista.length);
+    }
+    pintarEditor();
+    salvar();
+  }
+
+  function ligarEdicaoDireta(moldura) {
+    var campos = moldura.querySelectorAll("[data-campo]");
+    for (var i = 0; i < campos.length; i++) {
+      var el = campos[i];
+      el.setAttribute("contenteditable", "true");
+      el.setAttribute("spellcheck", "false");
+      el.addEventListener("focus", aoFocarCampo);
+      el.addEventListener("blur", aoSairDoCampo);
+      el.addEventListener("input", aoDigitarCampo);
+      el.addEventListener("paste", aoColarCampo);
+      el.addEventListener("keydown", aoTeclarCampo);
+    }
+  }
+
   function slidesComFundo() {
     var slides = (estado.carrossel && estado.carrossel.slides) || [];
     var fundos = L.planoDeFundos(slides);
     return slides.map(function (s, i) { return Object.assign({}, s, { fundo: s.fundo || fundos[i] }); });
+  }
+
+  // ── reordenar slides ────────────────────────────────────────────────────
+  //
+  // No mouse e na caneta você arrasta a miniatura. No dedo o gesto de arrastar
+  // é a rolagem da tira, então o caminho é pelos botões de mover do palco —
+  // que também servem para quem navega pelo teclado.
+
+  var arrasto = null;
+  var suprimirClique = 0;
+
+  function moverSlide(de, para) {
+    var slides = (estado.carrossel && estado.carrossel.slides) || [];
+    if (de === para || de < 0 || para < 0 || de >= slides.length || para >= slides.length) return false;
+    slides.splice(para, 0, slides.splice(de, 1)[0]);
+    estado.indice = para;
+    pintarTudo();
+    salvar();
+    return true;
+  }
+
+  // A fenda onde o slide entraria na lista de hoje: 0 antes da primeira
+  // miniatura, n depois da última.
+  function fendaSobOPonteiro(x) {
+    var filhos = $("tira").children;
+    for (var i = 0; i < filhos.length; i++) {
+      var r = filhos[i].getBoundingClientRect();
+      if (x < r.left + r.width / 2) return i;
+    }
+    return filhos.length;
+  }
+
+  // O slide arrastado sai da lista antes de voltar: fenda à direita da origem
+  // vale um índice a menos.
+  function destinoDoArrasto(x, de) {
+    var fenda = fendaSobOPonteiro(x);
+    return fenda > de ? fenda - 1 : fenda;
+  }
+
+  function marcarDestino(alvo) {
+    var filhos = $("tira").children;
+    for (var i = 0; i < filhos.length; i++) filhos[i].classList.toggle("alvo", i === alvo);
+  }
+
+  function aoPegarMiniatura(e) {
+    if (e.pointerType === "touch") return;          // no dedo, deixa rolar a tira
+    if (e.button != null && e.button !== 0) return;
+    var botao = e.currentTarget;
+    arrasto = {
+      de: Number(botao.dataset.indice), destino: Number(botao.dataset.indice),
+      x0: e.clientX, y0: e.clientY, mexeu: false, botao: botao
+    };
+    // captura para o gesto continuar valendo se o ponteiro sair da miniatura
+    try { botao.setPointerCapture(e.pointerId); } catch (err) { /* ponteiro já solto */ }
+  }
+
+  function aoArrastarMiniatura(e) {
+    if (!arrasto) return;
+    if (!arrasto.mexeu) {
+      if (Math.abs(e.clientX - arrasto.x0) < 6 && Math.abs(e.clientY - arrasto.y0) < 6) return;
+      arrasto.mexeu = true;
+      arrasto.botao.classList.add("arrastando");
+      $("tira").classList.add("reordenando");
+    }
+    e.preventDefault();
+    var alvo = destinoDoArrasto(e.clientX, arrasto.de);
+    if (alvo !== arrasto.destino) { arrasto.destino = alvo; marcarDestino(alvo); }
+  }
+
+  function aoSoltarMiniatura() {
+    if (!arrasto) return;
+    var a = arrasto;
+    arrasto = null;
+    a.botao.classList.remove("arrastando");
+    $("tira").classList.remove("reordenando");
+    marcarDestino(-1);
+    if (!a.mexeu) return;                            // foi clique: quem cuida é o onclick
+    suprimirClique = Date.now() + 250;
+    moverSlide(a.de, a.destino);
   }
 
   function pintarTira() {
@@ -558,7 +776,16 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       n.className = "n";
       n.textContent = i + 1;
       b.appendChild(n);
-      b.onclick = function () { estado.indice = i; pintarTudo(); };
+      b.dataset.indice = i;
+      b.onclick = function () {
+        if (Date.now() < suprimirClique) return;     // acabou de arrastar
+        estado.indice = i;
+        pintarTudo();
+      };
+      b.addEventListener("pointerdown", aoPegarMiniatura);
+      b.addEventListener("pointermove", aoArrastarMiniatura);
+      b.addEventListener("pointerup", aoSoltarMiniatura);
+      b.addEventListener("pointercancel", aoSoltarMiniatura);
       tira.appendChild(b);
       pintarMoldura(m, s, i + 1, lista.length);
     });
@@ -600,6 +827,19 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     var acoes = document.createElement("div");
     acoes.className = "linha";
     acoes.style.flex = "0 0 auto";
+    var total = ((estado.carrossel && estado.carrossel.slides) || []).length;
+    [["\u25c0", "Mover para trás", -1], ["\u25b6", "Mover para a frente", 1]].forEach(function (def) {
+      var bm = document.createElement("button");
+      bm.type = "button";
+      bm.className = "btn fantasma pequeno icone";
+      bm.textContent = def[0];
+      bm.title = def[1];
+      bm.setAttribute("aria-label", def[1]);
+      bm.disabled = estado.indice + def[2] < 0 || estado.indice + def[2] >= total;
+      bm.onclick = function () { moverSlide(estado.indice, estado.indice + def[2]); };
+      acoes.appendChild(bm);
+    });
+
     var bRe = document.createElement("button");
     bRe.type = "button";
     bRe.className = "btn fantasma pequeno";
@@ -778,6 +1018,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     var s = lista[estado.indice];
     if (!s) return;
     pintarMoldura($("molduraPalco"), s, estado.indice + 1, lista.length);
+    ligarEdicaoDireta($("molduraPalco"));
     var thumb = $("tira").children[estado.indice];
     if (thumb) pintarMoldura(thumb.querySelector(".moldura"), s, estado.indice + 1, lista.length);
   }

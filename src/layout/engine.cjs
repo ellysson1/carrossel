@@ -71,16 +71,24 @@
     return '<div class="' + classe + '" style="background-image:url(\'' + limpa + '\')"></div>';
   }
 
+  /**
+   * Marcador do campo de origem: o app usa para editar direto no slide.
+   * comMarcacao diz se o campo aceita **amarelo** e *negrito*.
+   */
+  function campo(nome, comMarcacao) {
+    return ' data-campo="' + esc(nome) + '"' + (comMarcacao ? ' data-rico="1"' : "");
+  }
+
   function label(s) {
-    return s.label ? '<div class="label">' + esc(s.label) + "</div>" : "";
+    return s.label ? '<div class="label"' + campo("label") + ">" + esc(s.label) + "</div>" : "";
   }
 
   function fonteNota(s) {
-    return s.fonte ? '<p class="fonte">' + rico(s.fonte) + "</p>" : "";
+    return s.fonte ? '<p class="fonte"' + campo("fonte", true) + ">" + rico(s.fonte) + "</p>" : "";
   }
 
   function corpoTexto(s) {
-    return s.corpo ? '<p class="texto">' + rico(s.corpo) + "</p>" : "";
+    return s.corpo ? '<p class="texto"' + campo("corpo", true) + ">" + rico(s.corpo) + "</p>" : "";
   }
 
   // ── renderizadores por tipo ───────────────────────────────────────────────
@@ -98,9 +106,9 @@
         '<div class="capa-veu"></div>' +
         '<div class="corpo base">' +
           '<div class="selo">' + selo + '<span class="selo-nome">' + esc(ctx.handle) + "</span></div>" +
-          '<h1 class="capa-titulo">' + rico(s.titulo) + "</h1>" +
-          (s.gancho ? '<div class="gancho">' + rico(s.gancho) + "</div>" : "") +
-          '<div class="arraste">' + esc(s.arraste || "Arraste para o lado ›››") + "</div>" +
+          '<h1 class="capa-titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h1>" +
+          (s.gancho ? '<div class="gancho"' + campo("gancho", true) + ">" + rico(s.gancho) + "</div>" : "") +
+          '<div class="arraste"' + campo("arraste") + ">" + esc(s.arraste || "Arraste para o lado ›››") + "</div>" +
         "</div>"
       );
     },
@@ -109,7 +117,7 @@
       return (
         '<div class="corpo">' +
           label(s) +
-          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           corpoTexto(s) +
           fonteNota(s) +
         "</div>"
@@ -121,11 +129,11 @@
       return (
         '<div class="corpo">' +
           label(s) +
-          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           (src
             ? '<figure class="figura' + (s.retrato ? " retrato" : "") + '">' +
                 foto(src, "foto") +
-                (s.credito ? "<figcaption>" + esc(s.credito) + "</figcaption>" : "") +
+                (s.credito ? "<figcaption" + campo("credito") + ">" + esc(s.credito) + "</figcaption>" : "") +
               "</figure>"
             : "") +
           corpoTexto(s) +
@@ -135,11 +143,11 @@
     },
 
     faixa: function (s) {
-      var itens = (s.itens || []).map(function (i) { return "<li>" + rico(i) + "</li>"; }).join("");
+      var itens = (s.itens || []).map(function (it, ix) { return "<li" + campo("itens." + ix, true) + ">" + rico(it) + "</li>"; }).join("");
       return (
         '<div class="corpo">' +
-          (s.intro ? '<p class="texto">' + rico(s.intro) + "</p>" : "") +
-          (s.faixa ? '<div class="faixa">' + rico(s.faixa) + "</div>" : "") +
+          (s.intro ? '<p class="texto"' + campo("intro", true) + ">" + rico(s.intro) + "</p>" : "") +
+          (s.faixa ? '<div class="faixa"' + campo("faixa", true) + ">" + rico(s.faixa) + "</div>" : "") +
           (itens ? '<ul class="lista">' + itens + "</ul>" : "") +
           fonteNota(s) +
         "</div>"
@@ -147,11 +155,11 @@
     },
 
     lista: function (s) {
-      var itens = (s.itens || []).map(function (i) { return "<li>" + rico(i) + "</li>"; }).join("");
+      var itens = (s.itens || []).map(function (it, ix) { return "<li" + campo("itens." + ix, true) + ">" + rico(it) + "</li>"; }).join("");
       return (
         '<div class="corpo">' +
           label(s) +
-          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           (itens ? '<ul class="lista">' + itens + "</ul>" : "") +
           corpoTexto(s) +
           fonteNota(s) +
@@ -165,8 +173,8 @@
           "<li>" +
             '<span class="n">' + (i + 1) + "</span>" +
             "<div>" +
-              '<div class="p-titulo">' + rico(p.titulo || p) + "</div>" +
-              (p.texto ? '<div class="p-texto">' + rico(p.texto) + "</div>" : "") +
+              '<div class="p-titulo"' + campo("passos." + i + ".titulo", true) + ">" + rico(p.titulo || p) + "</div>" +
+              (p.texto ? '<div class="p-texto"' + campo("passos." + i + ".texto", true) + ">" + rico(p.texto) + "</div>" : "") +
             "</div>" +
           "</li>"
         );
@@ -174,7 +182,7 @@
       return (
         '<div class="corpo">' +
           label(s) +
-          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           '<ol class="passos">' + itens + "</ol>" +
           fonteNota(s) +
         "</div>"
@@ -186,10 +194,10 @@
         '<div class="corpo">' +
           label(s) +
           '<div class="metrica">' +
-            '<div class="valor">' + esc(s.valor) + "</div>" +
-            (s.unidade ? '<div class="unidade">' + esc(s.unidade) + "</div>" : "") +
+            '<div class="valor"' + campo("valor") + ">" + esc(s.valor) + "</div>" +
+            (s.unidade ? '<div class="unidade"' + campo("unidade") + ">" + esc(s.unidade) + "</div>" : "") +
           "</div>" +
-          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           corpoTexto(s) +
           fonteNota(s) +
         "</div>"
@@ -199,12 +207,12 @@
     barras: function (s) {
       var dados = s.dados || [];
       var max = dados.reduce(function (m, d) { return Math.max(m, Number(d.valor) || 0); }, 0) || 1;
-      var barras = dados.map(function (d) {
+      var barras = dados.map(function (d, ix) {
         var pct = Math.max(2, Math.round(((Number(d.valor) || 0) / max) * 100));
         return (
           '<div class="barra' + (d.destaque ? " destaque" : "") + '">' +
-            '<div class="barra-topo"><span>' + esc(d.rotulo) + '</span>' +
-            '<span class="barra-valor">' + esc(d.exibicao != null ? d.exibicao : d.valor) + "</span></div>" +
+            '<div class="barra-topo"><span' + campo("dados." + ix + ".rotulo") + ">" + esc(d.rotulo) + "</span>" +
+            '<span class="barra-valor"' + campo("dados." + ix + ".exibicao") + ">" + esc(d.exibicao != null ? d.exibicao : d.valor) + "</span></div>" +
             '<div class="trilho"><div class="preenche" style="width:' + pct + '%"></div></div>' +
           "</div>"
         );
@@ -212,7 +220,7 @@
       return (
         '<div class="corpo">' +
           label(s) +
-          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (s.titulo ? '<h2 class="titulo"' + campo("titulo", true) + ">" + rico(s.titulo) + "</h2>" : "") +
           '<div class="barras">' + barras + "</div>" +
           corpoTexto(s) +
           fonteNota(s) +
@@ -223,8 +231,8 @@
     tese: function (s, ctx) {
       return (
         '<div class="corpo">' +
-          '<p class="tese-texto">' + rico(s.texto) + "</p>" +
-          '<div class="assinatura">' + esc(s.assinatura || ctx.handle) + "</div>" +
+          '<p class="tese-texto"' + campo("texto", true) + ">" + rico(s.texto) + "</p>" +
+          '<div class="assinatura"' + campo("assinatura") + ">" + esc(s.assinatura || ctx.handle) + "</div>" +
         "</div>"
       );
     },
@@ -235,11 +243,11 @@
         (retrato ? '<div class="cta-foto">' + foto(retrato, "foto") + "</div>" : "") +
         '<div class="corpo">' +
           '<h2 class="cta-titulo">' +
-            "<span>" + rico(s.titulo) + "</span>" +
-            (s.destaque ? '<span class="cta-caixa">' + rico(s.destaque) + "</span>" : "") +
+            "<span" + campo("titulo", true) + ">" + rico(s.titulo) + "</span>" +
+            (s.destaque ? '<span class="cta-caixa"' + campo("destaque", true) + ">" + rico(s.destaque) + "</span>" : "") +
           "</h2>" +
           corpoTexto(s) +
-          (s.acao ? '<div class="cta-acao">' + rico(s.acao) + "</div>" : "") +
+          (s.acao ? '<div class="cta-acao"' + campo("acao", true) + ">" + rico(s.acao) + "</div>" : "") +
         "</div>"
       );
     }
