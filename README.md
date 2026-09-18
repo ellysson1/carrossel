@@ -231,6 +231,28 @@ arquivo no slide. Em lote, quem gera é a CLI.
 Sem a capability de geração, a página continua servindo como diagramador puro: cole o
 `carrossel.json` e exporte.
 
+## Imagem de fundo e slide são coisas diferentes
+
+No editor de cada slide, **Imagem de fundo deste slide** traz o prompt em um campo
+editável: troque o assunto, ajuste a luz, mande gerar de novo. Três ações ali:
+
+- **Gerar esta imagem** — no app local, chama a Kie (ou o Gemini) na hora, só para este
+  slide, e já refaz o PNG. No artifact publicado o botão não aparece: a página não
+  alcança a Kie.
+- **Copiar prompt** — para gerar onde você preferir, inclusive no Google Flow.
+- **Enviar arquivo** — sobe uma imagem sua; no app local ela é gravada na pasta do
+  carrossel e entra no PNG final.
+
+O estilo da casa e a lista de negativos da marca entram sozinhos no prompt: no campo
+vai só o assunto.
+
+As duas etapas ficam em cartões diferentes, de propósito:
+
+| Cartão | O que faz |
+|---|---|
+| **2 · Revisar** | texto, voz da marca e **as imagens de fundo** |
+| **3 · Publicar** | **os slides**: gerar os PNG, baixar, copiar a legenda |
+
 ## A sua marca na capa
 
 Deixe o arquivo do logo na raiz do projeto com o nome **`Logo.png`** (ou `logo.png`,

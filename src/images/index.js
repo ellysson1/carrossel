@@ -29,9 +29,10 @@ function hash(s) {
   return crypto.createHash("sha1").update(s).digest("hex").slice(0, 12);
 }
 
-function alvos(carrossel) {
+function alvos(carrossel, somente) {
   const lista = [];
   (carrossel.slides || []).forEach((s, i) => {
+    if (somente && somente.indexOf(i) < 0) return;
     if (!s.imagem) return;
     if (!s.imagem.prompt && !s.imagem.arquivo) return;
     const aspect = s.tipo === "capa" ? (brand.imagem.proporcaoCapa || "4:5") : (brand.imagem.proporcaoInterna || "16:9");
@@ -50,12 +51,12 @@ async function comLimite(itens, limite, tarefa) {
 
 /**
  * Gera as imagens que faltam. Devolve {geradas, puladas, falhas}.
- * opcoes: {pasta, forcar, sinal, provedor, paralelas, aoProgredir}
+ * opcoes: {pasta, forcar, sinal, provedor, paralelas, aoProgredir, somenteIndices}
  */
 export async function gerarImagens(carrossel, opcoes = {}) {
   const provedor = (opcoes.provedor || provedorAtual()).toLowerCase();
   const pasta = garantirPasta(path.join(opcoes.pasta, "img"));
-  const itens = alvos(carrossel);
+  const itens = alvos(carrossel, opcoes.somenteIndices);
   const resultado = { geradas: 0, puladas: 0, falhas: [] };
 
   if (provedor === "none" || !itens.length) {

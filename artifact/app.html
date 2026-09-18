@@ -198,10 +198,12 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 .tipo-slide { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ambar); }
 
 .prompt-img {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5;
   background: var(--superficie-2); border: 1px dashed var(--borda); border-radius: 9px; padding: 10px;
-  color: var(--tinta-fraca); white-space: pre-wrap; word-break: break-word;
+  color: var(--tinta); width: 100%; resize: vertical; min-height: 76px;
 }
+.bloco-imagem { border-top: 1px solid var(--borda); padding-top: 14px; margin-top: 4px; }
+.btn.arquivo { cursor: pointer; }
 
 .lista-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; }
 .lista-hist button {
@@ -315,6 +317,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
           <div class="editor-topo">
             <h2 style="margin:0" id="tituloDeck">2 · Revisar</h2>
             <div class="linha" style="flex:0 0 auto">
+              <button class="btn fantasma pequeno" id="btnImagens" type="button" hidden>Gerar as imagens que faltam</button>
+              <button class="btn fantasma pequeno" id="btnPedir" type="button" hidden>Pedir imagens no PC</button>
               <button class="btn fantasma pequeno" id="btnLint" type="button">Conferir voz da marca</button>
             </div>
           </div>
@@ -330,11 +334,9 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
         <section class="cartao" id="cartaoExport" hidden>
           <h2>3 · Publicar</h2>
           <div class="linha">
-            <button class="btn principal" id="btnZip" type="button">Baixar tudo (.zip)</button>
-            <button class="btn fantasma" id="btnPng" type="button">Baixar este slide</button>
+            <button class="btn principal" id="btnZip" type="button">Baixar os slides (.zip)</button>
+            <button class="btn fantasma" id="btnPng" type="button">Baixar só este slide</button>
             <button class="btn fantasma" id="btnCopiarLegenda" type="button">Copiar legenda</button>
-            <button class="btn fantasma" id="btnImagens" type="button" hidden>Gerar as imagens</button>
-            <button class="btn fantasma" id="btnPedir" type="button" hidden>Pedir imagens no PC</button>
           </div>
           <div id="estadoExport" class="aviso" hidden style="margin-top:12px"></div>
           <h3 style="margin-top:18px">Legenda</h3>
@@ -641,33 +643,89 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
   function blocoImagem(s) {
     var box = document.createElement("div");
-    box.className = "campo";
+    box.className = "campo bloco-imagem";
+
     var lab = document.createElement("label");
-    lab.textContent = "Imagem";
+    lab.setAttribute("for", "prompt-imagem");
+    lab.textContent = "Imagem de fundo deste slide";
     box.appendChild(lab);
 
-    if (s.imagem && s.imagem.prompt) {
-      var pr = document.createElement("div");
-      pr.className = "prompt-img";
-      pr.textContent = s.imagem.prompt;
-      box.appendChild(pr);
-      var copiar = document.createElement("button");
-      copiar.type = "button";
-      copiar.className = "btn fantasma pequeno";
-      copiar.textContent = "Copiar prompt da imagem";
-      copiar.onclick = function () {
-        navigator.clipboard.writeText(s.imagem.prompt).then(function () {
-          copiar.textContent = "Prompt copiado";
-          setTimeout(function () { copiar.textContent = "Copiar prompt da imagem"; }, 1800);
-        });
+    var prompt = document.createElement("textarea");
+    prompt.id = "prompt-imagem";
+    prompt.className = "prompt-img";
+    prompt.rows = 4;
+    prompt.spellcheck = false;
+    prompt.placeholder = "Descreva a foto em inglês: objeto, ambiente, luz. Sem texto e sem gráfico dentro da imagem.";
+    prompt.value = (s.imagem && s.imagem.prompt) || "";
+    prompt.oninput = function () {
+      s.imagem = s.imagem || {};
+      s.imagem.prompt = prompt.value;
+    };
+    prompt.onchange = function () { salvar(); };
+    box.appendChild(prompt);
+
+    var dica = document.createElement("span");
+    dica.className = "dica";
+    dica.textContent = "O estilo da casa e os negativos da marca entram sozinhos. Aqui vai só o assunto.";
+    box.appendChild(dica);
+
+    var acoes = document.createElement("div");
+    acoes.className = "linha";
+    box.appendChild(acoes);
+
+    var podeGerar = local && provedorEscolhido() !== "none" && pastaLocal;
+    if (podeGerar) {
+      var bGerar = document.createElement("button");
+      bGerar.type = "button";
+      bGerar.className = "btn pequeno";
+      bGerar.textContent = (s.imagem && s.imagem.arquivo) ? "Gerar outra imagem" : "Gerar esta imagem";
+      bGerar.onclick = async function () {
+        var alvo = $("lintSaida");
+        bGerar.disabled = true;
+        bGerar.textContent = "Gerando…";
+        try {
+          var r = await rodarTarefa({
+            acao: "imagem",
+            pasta: pastaLocal,
+            indice: estado.indice,
+            prompt: prompt.value,
+            provedor: provedorEscolhido()
+          }, mostrarAndamento(alvo));
+          estado.carrossel = r.carrossel;
+          pintarTudo();
+          $("fluxo").hidden = true;
+          mostrarEstado(alvo, "Imagem do slide " + (estado.indice + 1) + " trocada.", "ok");
+        } catch (e) {
+          mostrarEstado(alvo, "Não deu para gerar: " + e.message, "erro");
+          bGerar.disabled = false;
+          bGerar.textContent = "Tentar de novo";
+        }
       };
-      box.appendChild(copiar);
+      acoes.appendChild(bGerar);
     }
 
+    var copiar = document.createElement("button");
+    copiar.type = "button";
+    copiar.className = "btn fantasma pequeno";
+    copiar.textContent = "Copiar prompt";
+    copiar.onclick = function () {
+      navigator.clipboard.writeText(prompt.value).then(function () {
+        copiar.textContent = "Copiado";
+        setTimeout(function () { copiar.textContent = "Copiar prompt"; }, 1800);
+      });
+    };
+    acoes.appendChild(copiar);
+
+    var rotulo = document.createElement("label");
+    rotulo.className = "btn fantasma pequeno arquivo";
+    rotulo.textContent = "Enviar arquivo";
     var entrada = document.createElement("input");
     entrada.type = "file";
     entrada.accept = "image/png,image/jpeg,image/webp";
-    entrada.style.marginTop = "8px";
+    entrada.hidden = true;
+    rotulo.appendChild(entrada);
+    acoes.appendChild(rotulo);
+
     entrada.onchange = async function () {
       var f = entrada.files && entrada.files[0];
       if (!f) return;
@@ -691,9 +749,9 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       }
       if (caps.assets) {
         try {
-          var r = await caps.assets.upload(f);
-          s.imagem.url = r.url;
-          s.imagem.assetId = r.id;
+          var r2 = await caps.assets.upload(f);
+          s.imagem.url = r2.url;
+          s.imagem.assetId = r2.id;
           atualizarPalco();
           salvar();
           return;
@@ -703,16 +761,15 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       leitor.onload = function () { s.imagem.dataUrl = String(leitor.result); atualizarPalco(); };
       leitor.readAsDataURL(f);
     };
-    box.appendChild(entrada);
 
-    var nota = document.createElement("span");
-    nota.className = "dica";
-    nota.textContent = local
-      ? (local.temChaveImagem
-          ? "Use \u201cGerar as imagens\u201d para criar todas de uma vez pela " + local.provedorImagem + ", ou suba um arquivo seu aqui."
-          : "Sem chave no .env: suba um arquivo seu aqui, ou preencha KIE_API_KEY e reinicie o app.")
-      : "A página publicada não alcança a Kie. Copie o prompt, gere a imagem e suba o arquivo aqui.";
-    box.appendChild(nota);
+    if (!podeGerar) {
+      var nota = document.createElement("span");
+      nota.className = "dica";
+      nota.textContent = local
+        ? "Escolha um gerador de imagem no painel do tema para criar a foto aqui."
+        : "A página publicada não alcança a Kie. Edite o prompt, copie e gere onde preferir — ou toque em “Pedir imagens no PC”.";
+      box.appendChild(nota);
+    }
     return box;
   }
 
@@ -1069,7 +1126,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   }
 
   $("btnImagens").onclick = async function () {
-    var alvo = $("estadoExport");
+    var alvo = $("lintSaida");
     $("btnImagens").disabled = true;
     try {
       var r = await rodarTarefa({ acao: "imagens", pasta: pastaLocal, provedor: provedorEscolhido() }, mostrarAndamento(alvo));
@@ -1087,7 +1144,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   };
 
   $("btnPedir").onclick = async function () {
-    var alvo = $("estadoExport");
+    var alvo = $("lintSaida");
     if (!caps.db) { mostrarEstado(alvo, "Esta visualização não guarda pedidos.", "alerta"); return; }
     $("btnPedir").disabled = true;
     try {
@@ -1335,7 +1392,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       marcarChipLocal();
       $("btnGerar").disabled = false;
       $("btnRoteiro").disabled = false;
-      $("btnZip").textContent = "Renderizar e abrir a pasta";
+      $("btnZip").textContent = "Gerar os slides e abrir a pasta";
       montarProvedores();
       $("btnImagens").hidden = provedorEscolhido() === "none";
       $("btnCelular").hidden = false;

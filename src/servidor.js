@@ -224,6 +224,35 @@ const ACOES = {
     return { pasta: path.basename(pasta), carrossel: c, falhas: r.falhas };
   },
 
+  /** Uma imagem só, a do slide que o autor está editando. */
+  async imagem(t, dados) {
+    const pasta = pastaSegura(dados.pasta);
+    const c = lerCarrossel(pasta);
+    const i = Number(dados.indice);
+    const slide = (c.slides || [])[i];
+    if (!slide) throw new Error("slide inexistente");
+
+    if (typeof dados.prompt === "string" && dados.prompt.trim()) {
+      slide.imagem = Object.assign({}, slide.imagem, { prompt: dados.prompt.trim() });
+      salvarCarrossel(pasta, c);
+    }
+    if (!slide.imagem || !slide.imagem.prompt) throw new Error("este slide não tem prompt de imagem");
+
+    anotar(t, `gerando a imagem do slide ${i + 1}`);
+    const r = await gerarImagens(c, {
+      pasta,
+      provedor: dados.provedor || undefined,
+      somenteIndices: [i],
+      forcar: true,
+      aoProgredir: (n, estado) => anotar(t, `slide ${n + 1}: ${estado}`)
+    });
+    if (r.falhas.length) throw new Error(r.falhas[0].erro);
+    salvarCarrossel(pasta, c);
+    anotar(t, "renderizando o slide");
+    await renderizarPNGs(c, pasta, { aoProgredir: () => {} });
+    return { pasta: path.basename(pasta), carrossel: c };
+  },
+
   async render(t, dados) {
     const pasta = pastaSegura(dados.pasta);
     const c = dados.carrossel || lerCarrossel(pasta);
