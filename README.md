@@ -94,9 +94,11 @@ Opções: `--tipo`, `--slides`, `--cta`, `--contexto`, `--saida`, `--modelo`,
 `IMAGE_PROVIDER=kie` (padrão) ou `gemini`, ou `none` para pular.
 
 - **Kie.ai** — API unificada de jobs: `POST /jobs/createTask` com `{model, input}`,
-  e `GET /jobs/recordInfo?taskId=…` até `state=success`. O identificador do modelo e
-  o nome do campo de proporção mudam de modelo para modelo, então ficam no `.env`
-  (`KIE_MODEL`, `KIE_ASPECT_FIELD`); confira na página do modelo em docs.kie.ai.
+  e `GET /jobs/recordInfo?taskId=…` até `state=success`. Verificado contra a API viva
+  com os valores padrão do `.env.example` (`google/nano-banana` + `aspect_ratio`):
+  cerca de 60 s e 1,2 MB por imagem. O identificador do modelo e o nome do campo de
+  proporção mudam de modelo para modelo — ao trocar de modelo, confira os dois na
+  página dele em docs.kie.ai e ajuste `KIE_MODEL` e `KIE_ASPECT_FIELD`.
 - **Gemini (AI Studio)** — `generateContent` no `gemini-2.5-flash-image`; a imagem
   volta em base64 na resposta. Se a versão do modelo recusar `imageConfig`, o adapter
   repete a chamada sem ele e põe a proporção no texto do prompt.
