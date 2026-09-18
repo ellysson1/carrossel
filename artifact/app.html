@@ -163,6 +163,21 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 .btn.fantasma { background: transparent; color: var(--tinta); border-color: var(--borda); }
 .btn.pequeno { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
 .btn.icone { flex: 0 0 auto; min-width: 36px; padding: 6px 9px; line-height: 1; }
+
+/* barra que aparece sobre o texto selecionado no slide */
+.barra-texto {
+  position: fixed; z-index: 70; display: flex; gap: 4px; padding: 4px;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: 10px;
+  box-shadow: var(--sombra); transform: translate(-50%, calc(-100% - 10px));
+}
+.barra-texto[hidden] { display: none; }
+.barra-texto button {
+  appearance: none; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+  border: 0; border-radius: 7px; padding: 6px 10px; background: transparent; color: var(--tinta);
+}
+.barra-texto button:hover { background: var(--superficie-2); }
+.barra-texto .amarelo { background: var(--ambar); color: #2A1F00; }
+.barra-texto .amarelo:hover { filter: brightness(0.95); background: var(--ambar); }
 .btn.largo { width: 100%; }
 
 .aviso { font-size: 13px; border-radius: 9px; padding: 10px 12px; border: 1px solid var(--borda); background: var(--superficie-2); }
@@ -331,6 +346,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
             <div class="linha" style="flex:0 0 auto">
               <button class="btn fantasma pequeno" id="btnImagens" type="button" hidden>Gerar as imagens que faltam</button>
               <button class="btn fantasma pequeno" id="btnPedir" type="button" hidden>Pedir imagens no PC</button>
+              <button class="btn fantasma pequeno icone" id="btnDesfazer" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled>↶</button>
+              <button class="btn fantasma pequeno icone" id="btnRefazer" type="button" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer" disabled>↷</button>
               <button class="btn fantasma pequeno" id="btnLint" type="button">Conferir voz da marca</button>
             </div>
           </div>
@@ -410,6 +427,12 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     <input type="range" id="tpVel" min="10" max="120" value="46" style="width:160px">
     <button class="btn fantasma" id="tpFechar" type="button">Fechar</button>
   </div>
+</div>
+
+<div class="barra-texto" id="barraTexto" hidden role="toolbar" aria-label="Marcação do texto">
+  <button type="button" class="amarelo" data-marca="amarelo" title="Retângulo amarelo">Amarelo</button>
+  <button type="button" data-marca="negrito" title="Negrito"><b>Negrito</b></button>
+  <button type="button" data-marca="limpar" title="Tirar a marcação">Limpar</button>
 </div>
 
 <div id="exportacao" aria-hidden="true"></div>
@@ -810,6 +833,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     ta.value = valor == null ? "" : valor;
     ta.rows = alto || 2;
     ta.oninput = function () { aoMudar(ta.value); };
+    ta.onchange = function () { salvar(); };
     wrap.appendChild(lab);
     wrap.appendChild(ta);
     return wrap;
@@ -1028,6 +1052,151 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     $("hashtagsTxt").textContent = (estado.carrossel.hashtags || []).join(" ");
   }
 
+  // ── desfazer / refazer ──────────────────────────────────────────────────
+  //
+  // O carrossel é um JSON pequeno; cada edição confirmada guarda uma cópia
+  // inteira. O ponto de confirmação é salvar(): tudo o que persiste entra na
+  // pilha. Carregar outro carrossel começa uma pilha nova.
+
+  var edicoes = { pilha: [], pos: -1, aplicando: false, limite: 80 };
+
+  function copiaProfunda(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function iniciarEdicoes() {
+    edicoes.pilha = estado.carrossel ? [copiaProfunda(estado.carrossel)] : [];
+    edicoes.pos = edicoes.pilha.length - 1;
+    pintarBotoesEdicao();
+  }
+
+  function marcarEdicao() {
+    if (!estado.carrossel || edicoes.aplicando) return;
+    var agora = JSON.stringify(estado.carrossel);
+    var topo = edicoes.pilha[edicoes.pos];
+    if (topo && JSON.stringify(topo) === agora) return;      // nada mudou de verdade
+    edicoes.pilha = edicoes.pilha.slice(0, edicoes.pos + 1);   // descarta o "refazer" antigo
+    edicoes.pilha.push(JSON.parse(agora));
+    if (edicoes.pilha.length > edicoes.limite) edicoes.pilha.shift();
+    edicoes.pos = edicoes.pilha.length - 1;
+    pintarBotoesEdicao();
+  }
+
+  function aplicarEdicao(pos) {
+    if (pos < 0 || pos >= edicoes.pilha.length) return;
+    edicoes.pos = pos;
+    edicoes.aplicando = true;
+    try {
+      estado.carrossel = copiaProfunda(edicoes.pilha[pos]);
+      var n = (estado.carrossel.slides || []).length;
+      if (estado.indice >= n) estado.indice = Math.max(0, n - 1);
+      pintarTudo();
+      salvar();
+    } finally {
+      edicoes.aplicando = false;
+    }
+    pintarBotoesEdicao();
+  }
+
+  function desfazerEdicao() { confirmarCampoAberto(); aplicarEdicao(edicoes.pos - 1); }
+  function refazerEdicao() { confirmarCampoAberto(); aplicarEdicao(edicoes.pos + 1); }
+
+  // um campo em edição confirma antes: assim o Ctrl+Z desfaz o que você acabou de digitar
+  function confirmarCampoAberto() {
+    var a = document.activeElement;
+    if (a && a.closest && a.closest("#cartaoDeck, #cartaoExport") && a.blur) a.blur();
+  }
+
+  function pintarBotoesEdicao() {
+    $("btnDesfazer").disabled = edicoes.pos <= 0;
+    $("btnRefazer").disabled = edicoes.pos >= edicoes.pilha.length - 1;
+  }
+
+  $("btnDesfazer").onclick = desfazerEdicao;
+  $("btnRefazer").onclick = refazerEdicao;
+
+  document.addEventListener("keydown", function (e) {
+    if (!estado.carrossel) return;
+    var tecla = String(e.key || "").toLowerCase();
+    var comando = e.ctrlKey || e.metaKey;
+    if (!comando || (tecla !== "z" && tecla !== "y")) return;
+    // no formulário do tema o desfazer é o do navegador, do próprio campo
+    var a = document.activeElement;
+    if (a && a.closest && !a.closest("#cartaoDeck, #cartaoExport") && a !== document.body) return;
+    e.preventDefault();
+    if (tecla === "y" || e.shiftKey) refazerEdicao();
+    else desfazerEdicao();
+  });
+
+  // ── barra flutuante sobre o texto selecionado ────────────────────────────
+  //
+  // Só aparece num campo do palco que aceita marcação. Enquanto o campo está
+  // em edição o conteúdo é texto puro, então marcar é trocar a seleção por
+  // ela mesma entre asteriscos.
+
+  var barraTexto = $("barraTexto");
+  var barraAgendada = false;
+
+  function campoComSelecao() {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+    var no = sel.anchorNode;
+    var el = no && (no.nodeType === 1 ? no : no.parentElement);
+    el = el && el.closest && el.closest("#molduraPalco [data-campo][data-rico]");
+    if (!el || el !== document.activeElement) return null;
+    if (!el.contains(sel.focusNode)) return null;
+    return el;
+  }
+
+  function posicionarBarra() {
+    barraAgendada = false;
+    var el = campoComSelecao();
+    if (!el) { barraTexto.hidden = true; return; }
+    var r = window.getSelection().getRangeAt(0).getBoundingClientRect();
+    if (!r.width && !r.height) { barraTexto.hidden = true; return; }
+    barraTexto.hidden = false;
+    var larg = barraTexto.offsetWidth || 200;
+    var x = Math.min(Math.max(r.left + r.width / 2, larg / 2 + 8), window.innerWidth - larg / 2 - 8);
+    var y = r.top;
+    if (y < 56) { y = r.bottom + 10 + barraTexto.offsetHeight; }
+    barraTexto.style.left = x + "px";
+    barraTexto.style.top = y + "px";
+  }
+
+  // Reposiciona a cada mudança de seleção, rolagem ou redimensionamento:
+  // com seleção viva ela volta para o lugar; sem seleção, some.
+  function agendarBarra() {
+    if (barraAgendada) return;
+    barraAgendada = true;
+    setTimeout(posicionarBarra, 0);
+  }
+  document.addEventListener("selectionchange", agendarBarra);
+  window.addEventListener("scroll", agendarBarra, true);
+  window.addEventListener("resize", agendarBarra);
+
+  function aplicarMarca(tipo) {
+    var el = campoComSelecao();
+    if (!el) return;
+    var txt = window.getSelection().toString();
+    var esq = (txt.match(/^\s*/) || [""])[0];
+    var dir = (txt.match(/\s*$/) || [""])[0];
+    var miolo = txt.replace(/\*/g, "").trim();
+    var novo;
+    if (tipo === "limpar" || !miolo) novo = txt.replace(/\*/g, "");
+    else {
+      var m = tipo === "amarelo" ? "**" : "*";
+      novo = esq + m + miolo + m + dir;
+    }
+    document.execCommand("insertText", false, novo);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    barraTexto.hidden = true;
+  }
+
+  Array.prototype.forEach.call(barraTexto.querySelectorAll("button"), function (b) {
+    // mousedown com preventDefault: o clique não rouba a seleção do campo
+    b.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    b.addEventListener("touchstart", function (e) { e.preventDefault(); }, { passive: false });
+    b.addEventListener("click", function () { aplicarMarca(b.getAttribute("data-marca")); });
+  });
+
   function pintarTudo() {
     if (!estado.carrossel) return;
     $("cartaoDeck").hidden = false;
@@ -1037,6 +1206,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     atualizarPalco();
     pintarEditor();
     pintarLegenda();
+    pintarBotoesEdicao();
   }
 
   function irParaODeck() {
@@ -1124,6 +1294,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       estado.carrossel = c;
       estado.indice = 0;
       estado.id = null;
+      iniciarEdicoes();
       pintarTudo();
       irParaODeck();
       rodarLint(true);
@@ -1192,6 +1363,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       estado.carrossel = c;
       estado.indice = 0;
       estado.id = null;
+      iniciarEdicoes();
       pintarTudo();
       irParaODeck();
       rodarLint(false);
@@ -1204,11 +1376,13 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   $("legendaTxt").addEventListener("input", function () {
     if (estado.carrossel) estado.carrossel.legenda = $("legendaTxt").textContent;
   });
+  $("legendaTxt").addEventListener("blur", function () { salvar(); });
 
   // ── histórico (db) ──────────────────────────────────────────────────────
 
   async function salvar() {
     if (!estado.carrossel) return;
+    marcarEdicao();
     if (local) {
       if (!pastaLocal) return;
       try {
@@ -1252,6 +1426,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
         estado.carrossel = dados.carrossel;
         estado.indice = 0;
         estado.id = d.id;
+        iniciarEdicoes();
         pintarTudo();
         rodarLint(true);
       };
@@ -1277,6 +1452,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
         estado.carrossel = await api("/api/carrosseis/" + encodeURIComponent(item.pasta));
         pastaLocal = item.pasta;
         estado.indice = 0;
+        iniciarEdicoes();
         pintarTudo();
         irParaODeck();
         rodarLint(true);

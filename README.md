@@ -54,6 +54,13 @@ Para **trocar a ordem**, arraste as miniaturas. No celular — onde arrastar é 
 tira — use os botões ◀ ▶ ao lado de *Regerar este slide*; eles também funcionam pelo
 teclado.
 
+**Selecionou um trecho**, aparece uma barrinha em cima dele: **Amarelo** põe o retângulo,
+**Negrito** engrossa, **Limpar** tira a marcação. Você não precisa digitar os asteriscos.
+
+**Errou, volta.** Ctrl+Z desfaz e Ctrl+Shift+Z (ou Ctrl+Y) refaz — qualquer edição: texto,
+ordem dos slides, foto, prompt. No celular, os botões ↶ ↷ no topo do deck fazem o mesmo.
+O histórico é do carrossel aberto; abrir outro começa do zero.
+
 Tudo o que você muda aí vai para o mesmo `carrossel.json` que a CLI renderiza. Os
 campos da lateral continuam valendo para o que não aparece no slide (fonte, crédito,
 etiqueta) e para colar texto longo.
