@@ -1,0 +1,119 @@
+{
+  "marca": "No Controle",
+  "handle": "@profellyssonrocha",
+  "autor": "Éllysson Rocha — auditor de Tribunal de Contas, 15º no TCU e 3º na ANAC",
+  "publico": "candidatos a concursos da área de controle (TCU, TCE, TCM, CGU, CNU). Adultos, alta escolaridade, tempo escasso. Não é público de conteúdo motivacional.",
+  "tese": "Estudar muito não aprova. Estudar orientado por dados aprova: ciclo ponderado por peso da matéria (50%), extensão (25%) e dificuldade (25%).",
+  "formato": {
+    "largura": 1080,
+    "altura": 1350,
+    "padding": 72
+  },
+  "cores": {
+    "escuro": "#0D2B5E",
+    "medio": "#1A4A9C",
+    "claro": "#F4F5F7",
+    "creme": "#FFF7E0",
+    "amarelo": "#F5C842",
+    "branco": "#FFFFFF",
+    "tintaClara": "#2A1F00"
+  },
+  "cabecalho": {
+    "esquerda": "No Controle",
+    "centro": "@profellyssonrocha",
+    "direita": "Auditor TCU //"
+  },
+  "tipografia": {
+    "familia": "Nunito",
+    "fallback": "system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+    "escala": {
+      "capa": 92,
+      "faixa": 56,
+      "titulo": 46,
+      "corpo": 30,
+      "bullet": 28,
+      "label": 20,
+      "rodape": 16,
+      "cabecalho": 15
+    }
+  },
+  "linhasEditoriais": {
+    "metodo": {
+      "nome": "Método",
+      "descricao": "Ensina uma parte da metodologia e contraria o senso comum do concurseiro.",
+      "exemplo": "Por que estudar 10h por dia te reprova"
+    },
+    "plataforma": {
+      "nome": "Plataforma",
+      "descricao": "Mostra o ciclo adaptativo funcionando na prática, com números.",
+      "exemplo": "O ciclo que se ajusta sozinho quando você erra"
+    },
+    "autoridade": {
+      "nome": "Autoridade",
+      "descricao": "Bastidor da aprovação e da rotina real, sem heroísmo.",
+      "exemplo": "Como eu organizava o ciclo antes de passar em 15º"
+    },
+    "prova-social": {
+      "nome": "Prova social",
+      "descricao": "Progresso concreto de aluno: antes, depois, números.",
+      "exemplo": "3 meses de ciclo: o antes e o depois do edital"
+    },
+    "tcu": {
+      "nome": "Decodificando o TCU",
+      "descricao": "Decisão publicada ou fiscalização de repercussão contada como notícia: contexto, decisão, números, ressalva e como a banca cobra. Somente informação pública, com fonte no slide, sem comentar processo em curso.",
+      "exemplo": "O que o acórdão sobre contratação direta muda na sua prova"
+    },
+    "edital": {
+      "nome": "Decodificando o edital",
+      "descricao": "Edital ou banca lido como mercado: vagas, pesos, o que mudou, estratégia de estudo.",
+      "exemplo": "Os pesos do edital dizem por onde começar"
+    }
+  },
+  "ctas": [
+    "Quero participar",
+    "Acessar material",
+    "Entrar na mentoria",
+    "Comente aqui embaixo",
+    "Vamos trocar experiências?"
+  ],
+  "palavrasChaveCta": [
+    "CONTROLE",
+    "CICLO",
+    "EDITAL",
+    "TCU"
+  ],
+  "voz": {
+    "idioma": "português do Brasil",
+    "pessoa": "segunda pessoa (você). Nunca 'o candidato', nunca 'nós te ajudamos'.",
+    "tom": "professor falando com um aluno por vez. Próximo sem ser familiar demais, concreto, nunca motivacional vago. Reconhece tempo escasso, fadiga e pressão de prazo.",
+    "registro": [
+      "Você sabe o que é?",
+      "O problema não é estudar pouco.",
+      "A maioria erra aqui.",
+      "Faça assim:"
+    ],
+    "casing": "títulos em sentence case; labels em UPPERCASE com tracking",
+    "tamanhoSlide": "40 a 70 palavras por slide, uma ideia por slide"
+  },
+  "proibicoes": [
+    "emoji em qualquer campo",
+    "abertura com pergunta retórica genérica (\"Você já se perguntou\")",
+    "construção \"não é X, é Y\"",
+    "listas de exatamente três elementos por hábito",
+    "adjetivos de venda vazios (incrível, poderoso, revolucionário, essencial, fundamental)",
+    "gerúndio de preenchimento (buscando, visando, objetivando)",
+    "conclusão genérica (\"no fim das contas, o que importa é\")",
+    "travessão como pausa dramática repetida",
+    "título em caixa alta",
+    "texto branco sobre amarelo",
+    "texto cinza sobre azul-escuro"
+  ],
+  "imagem": {
+    "estilo": "fotografia editorial documental, luz natural dura, paleta institucional dessaturada com azuis profundos, composição limpa com muito espaço negativo, profundidade de campo rasa, 35mm",
+    "negativo": "sem texto, sem letras, sem números, sem marca d'água, sem logotipo, sem colagem, sem ilustração, sem render 3d, sem rosto de pessoa pública real, sem bandeira, sem símbolo partidário",
+    "proporcaoCapa": "4:5",
+    "proporcaoInterna": "16:9",
+    "estiloEn": "editorial documentary photograph, hard natural light, desaturated institutional palette with deep navy tones, clean composition with generous negative space, shallow depth of field, 35mm, photographic grain-free finish",
+    "negativoEn": "no text, no letters, no numbers, no watermark, no logo, no collage, no illustration, no 3d render, no charts, no recognizable public figure, no flags, no political symbols"
+  }
+}

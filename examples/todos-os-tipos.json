@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "tema": "Amostra de todos os tipos de slide",
+    "tipo": "metodo",
+    "linha": "Método",
+    "palavraCta": "CONTROLE"
+  },
+  "slides": [
+    {
+      "tipo": "capa",
+      "titulo": "Dez horas por dia e a **nota** não sobe",
+      "gancho": "Você sabe quanto do seu estudo virou questão certa?",
+      "imagem": { "prompt": "an empty study desk at dawn, stacked law books, a cold cup of coffee, window light" }
+    },
+    {
+      "tipo": "faixa",
+      "intro": "Você senta às sete da manhã, levanta às onze da noite e chega no simulado com a mesma nota do mês passado.",
+      "faixa": "O problema é o **registro**",
+      "itens": [
+        "Hora estudada não é hora aprendida.",
+        "Sem registro de erro, a revisão vira sorteio.",
+        "O peso da matéria decide onde a próxima hora rende mais."
+      ]
+    },
+    {
+      "tipo": "texto",
+      "label": "O QUE OS DADOS MOSTRAM",
+      "titulo": "A maioria erra aqui",
+      "corpo": "Quem estuda por tempo mede esforço. Quem estuda por ciclo mede resultado. A diferença aparece quando o edital sai e você precisa decidir o que cortar: sem dado, você corta a matéria que gosta menos, e não a que pesa menos na prova.",
+      "fonte": "Base: 412 alunos acompanhados entre 2024 e 2026."
+    },
+    {
+      "tipo": "imagem",
+      "titulo": "O ciclo se ajusta quando você erra",
+      "imagem": { "prompt": "hands writing on a printed spreadsheet, institutional office corridor blurred in the background" },
+      "corpo": "A cada bloco de questões, o erro realimenta o peso da matéria no ciclo seguinte. Você não decide de novo: o ciclo decide com o dado da semana.",
+      "credito": "Planilha de ciclo, versão 2026"
+    },
+    {
+      "tipo": "metrica",
+      "valor": "38%",
+      "unidade": "DAS HORAS SEM RETORNO",
+      "titulo": "É o que se perde relendo o que você já acerta",
+      "corpo": "Quando o registro de acerto entra na conta, quase quatro de cada dez horas estavam indo para conteúdo já dominado.",
+      "fonte": "Fonte: amostra interna, 2026."
+    },
+    {
+      "tipo": "barras",
+      "titulo": "Onde o peso do edital manda estudar",
+      "dados": [
+        { "rotulo": "Controle externo", "valor": 50, "exibicao": "peso 5", "destaque": true },
+        { "rotulo": "Administrativo", "valor": 30, "exibicao": "peso 3" },
+        { "rotulo": "Constitucional", "valor": 30, "exibicao": "peso 3" },
+        { "rotulo": "Português", "valor": 10, "exibicao": "peso 1" }
+      ],
+      "fonte": "Fonte: edital TCU 2024, prova de conhecimentos específicos."
+    },
+    {
+      "tipo": "passos",
+      "titulo": "Faça assim nesta semana",
+      "passos": [
+        { "titulo": "Anote o peso de cada matéria", "texto": "Direto do edital, sem chute." },
+        { "titulo": "Meça a sua taxa de acerto", "texto": "Cinquenta questões por matéria já dizem muito." },
+        { "titulo": "Multiplique peso por erro", "texto": "O maior produto abre o ciclo." },
+        { "titulo": "Refaça a conta no domingo", "texto": "O ciclo da semana seguinte sai dela." }
+      ]
+    },
+    {
+      "tipo": "texto",
+      "titulo": "O que esse número não diz",
+      "corpo": "Taxa de acerto alta em questão fácil não sustenta prova de controle externo. Antes de cortar uma matéria do ciclo, confira o nível das questões que você acertou: banca não repete bloco fácil na véspera da aprovação.",
+      "fonte": "Ressalva: amostra própria, sem controle por banca."
+    },
+    {
+      "tipo": "tese",
+      "texto": "Você não precisa de mais horas. Precisa saber **quais** horas estão pagando."
+    },
+    {
+      "tipo": "cta",
+      "titulo": "Quer montar o seu ciclo",
+      "destaque": "com os seus dados?",
+      "corpo": "Eu monto o ciclo com você, a partir do seu edital e da sua taxa de acerto real.",
+      "acao": "Comenta **CONTROLE** que eu te mando o formulário da mentoria na DM."
+    }
+  ],
+  "legenda": "Dez horas por dia não dizem nada sobre a sua nota. O que diz é quanto daquele tempo virou questão certa em matéria que pesa.\n\nNa amostra que acompanho desde 2024, 38% das horas estavam indo para conteúdo já dominado. Isso é quase um dia inteiro de estudo por semana rendendo pouco.\n\nO ciclo ponderado resolve isso sem depender de disciplina: peso da matéria, extensão e dificuldade entram na conta, e a semana seguinte se ajusta sozinha.\n\nQuanto do seu estudo desta semana você consegue provar que virou acerto?",
+  "hashtags": ["#concursopublico", "#tcu", "#controleexterno", "#cicloestudos", "#auditor", "#estudarcomdados", "#cnu"]
+}

@@ -1,0 +1,359 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Motor de layout dos carrosséis — No Controle (@profellyssonrocha)
+   Usado pela CLI (Playwright) e pelo artifact publicado. Fonte única.
+   Formato: 1080 x 1350. Grid base 4px. Máximo de 3 cores por peça.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.slide {
+  --escuro: #0D2B5E;
+  --medio: #1A4A9C;
+  --claro: #F4F5F7;
+  --creme: #FFF7E0;
+  --amarelo: #F5C842;
+  --branco: #FFFFFF;
+  --tinta-clara: #2A1F00;
+
+  --pad: 72px;
+  --k: 1; /* multiplicador de auto-ajuste tipográfico */
+  --tinta: var(--branco);
+  --tinta-destaque: var(--escuro);
+  --fundo: var(--escuro);
+
+  position: relative;
+  box-sizing: border-box;
+  width: 1080px;
+  height: 1350px;
+  padding: var(--pad);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: Nunito, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.slide.fundo-escuro { --fundo: var(--escuro); --tinta: var(--branco); --tinta-destaque: var(--escuro); }
+.slide.fundo-medio  { --fundo: var(--medio);  --tinta: var(--branco); --tinta-destaque: var(--escuro); }
+.slide.fundo-claro  { --fundo: var(--claro);  --tinta: var(--escuro); --tinta-destaque: var(--tinta-clara); }
+.slide.fundo-creme  { --fundo: var(--creme);  --tinta: var(--escuro); --tinta-destaque: var(--tinta-clara); }
+.slide.fundo-foto   { --fundo: var(--escuro); --tinta: var(--branco); --tinta-destaque: var(--escuro); }
+
+/* ── cabeçalho e rodapé fixos ─────────────────────────────────────────────── */
+
+.slide .hdr,
+.slide .ftr {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  flex: 0 0 auto;
+}
+
+.slide .hdr > span { flex: 1 1 0; }
+.slide .hdr > span:nth-child(2) { text-align: center; }
+.slide .hdr > span:nth-child(3) { text-align: right; }
+
+.slide .ftr { margin-top: auto; padding-top: 24px; font-size: 16px; }
+.slide .ftr .traco { display: block; width: 40px; height: 3px; background: currentColor; opacity: 0.6; }
+.slide .ftr .num { font-variant-numeric: tabular-nums; }
+
+/* ── corpo ────────────────────────────────────────────────────────────────── */
+
+.slide .corpo {
+  position: relative;
+  z-index: 3;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(40px * var(--k));
+  padding: 40px 0 24px;
+  min-height: 0;
+}
+
+.slide .corpo.topo { justify-content: flex-start; }
+.slide .corpo.base { justify-content: flex-end; }
+
+/* ── primitivas de texto ──────────────────────────────────────────────────── */
+
+.slide .label {
+  font-size: calc(20px * var(--k));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+.slide .titulo {
+  font-size: calc(46px * var(--k));
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.slide .texto {
+  font-size: calc(30px * var(--k));
+  font-weight: 400;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 88%;
+}
+
+.slide .fonte {
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 0.66;
+  margin: 0;
+}
+
+/* retângulo amarelo atrás da palavra-chave — nunca texto branco sobre amarelo */
+.slide .hl {
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  padding: 0.04em 0.18em 0.1em;
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.slide .forte { font-weight: 800; }
+
+/* ── capa ─────────────────────────────────────────────────────────────────── */
+
+.slide.tipo-capa { padding-bottom: 56px; }
+
+.slide .capa-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.slide .capa-veu {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(13, 43, 94, 0.72) 0%, rgba(13, 43, 94, 0.18) 34%, rgba(13, 43, 94, 0.88) 72%, rgba(13, 43, 94, 0.97) 100%);
+}
+
+.slide.tipo-capa .corpo { justify-content: flex-end; gap: 32px; }
+
+.slide .selo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  align-self: flex-start;
+}
+
+.slide .selo-foto {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--amarelo);
+  background-color: var(--medio);
+  background-size: cover;
+  background-position: center;
+}
+
+.slide .selo-marca {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--amarelo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--amarelo);
+}
+
+.slide .selo-nome { font-size: calc(22px * var(--k)); font-weight: 800; letter-spacing: 0.02em; }
+
+.slide .capa-titulo {
+  font-size: calc(92px * var(--k));
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.slide .gancho {
+  align-self: flex-start;
+  background: var(--amarelo);
+  color: var(--escuro);
+  font-size: calc(38px * var(--k));
+  font-weight: 800;
+  line-height: 1.24;
+  padding: 18px 26px 22px;
+  border-radius: 6px;
+  max-width: 92%;
+}
+
+.slide .arraste {
+  font-size: calc(20px * var(--k));
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+/* ── faixa amarela (slide-tese do briefing) ───────────────────────────────── */
+
+.slide .faixa {
+  align-self: flex-start;
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  font-size: calc(56px * var(--k));
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  padding: 14px 24px 20px;
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+/* ── imagem interna ───────────────────────────────────────────────────────── */
+
+.slide .figura { margin: 0; flex: 0 0 auto; }
+
+.slide .figura .foto {
+  width: 100%;
+  height: 384px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.08);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.slide .figura.retrato .foto { height: 540px; }
+.slide .figura figcaption { margin-top: 12px; font-size: calc(16px * var(--k)); font-weight: 600; opacity: 0.6; }
+
+/* ── lista ────────────────────────────────────────────────────────────────── */
+
+.slide .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
+
+.slide .lista li {
+  position: relative;
+  padding-left: 40px;
+  font-size: calc(28px * var(--k));
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.slide .lista li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.48em;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--amarelo);
+}
+
+/* ── passos numerados ─────────────────────────────────────────────────────── */
+
+.slide .passos { display: flex; flex-direction: column; gap: 28px; margin: 0; padding: 0; list-style: none; }
+
+.slide .passos li { display: flex; gap: 24px; align-items: flex-start; }
+
+.slide .passos .n {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  font-size: calc(28px * var(--k));
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide .passos .p-titulo { font-size: calc(28px * var(--k)); font-weight: 800; line-height: 1.25; }
+.slide .passos .p-texto { font-size: calc(24px * var(--k)); font-weight: 400; line-height: 1.38; opacity: 0.9; margin-top: 6px; }
+
+/* ── métrica ──────────────────────────────────────────────────────────────── */
+
+.slide .metrica { display: flex; flex-direction: column; gap: 8px; }
+.slide .metrica .valor { font-size: calc(170px * var(--k)); font-weight: 900; line-height: 0.92; letter-spacing: -0.04em; color: var(--amarelo); }
+.slide .metrica .unidade { font-size: calc(26px * var(--k)); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+
+/* ── barras ───────────────────────────────────────────────────────────────── */
+
+.slide .barras { display: flex; flex-direction: column; gap: 24px; }
+.slide .barra .barra-topo { display: flex; justify-content: space-between; align-items: baseline; font-size: calc(24px * var(--k)); font-weight: 700; margin-bottom: 10px; }
+.slide .barra .barra-valor { font-variant-numeric: tabular-nums; font-weight: 800; }
+.slide .barra .trilho { height: 28px; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 14%, transparent); overflow: hidden; }
+.slide .barra .preenche { height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 34%, transparent); }
+.slide .barra.destaque .preenche { background: var(--amarelo); }
+.slide .barra.destaque .barra-topo { color: var(--tinta); }
+
+/* ── tese (fundo creme, tipografia grande) ────────────────────────────────── */
+
+.slide.tipo-tese .corpo { gap: 32px; }
+.slide .tese-texto { font-size: calc(58px * var(--k)); font-weight: 900; line-height: 1.14; letter-spacing: -0.025em; margin: 0; }
+.slide .assinatura { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+
+/* ── encerramento ─────────────────────────────────────────────────────────── */
+
+.slide.tipo-cta .corpo { gap: 32px; }
+.slide .cta-titulo { font-size: calc(62px * var(--k)); font-weight: 900; line-height: 1.1; letter-spacing: -0.025em; margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.slide .cta-caixa { background: var(--amarelo); color: var(--tinta-destaque); padding: 10px 22px 16px; border-radius: 6px; }
+.slide .cta-acao { font-size: calc(30px * var(--k)); font-weight: 800; line-height: 1.35; }
+.slide .cta-foto { position: absolute; right: 0; bottom: 0; width: 420px; height: 620px; z-index: 2; }
+.slide .cta-foto .foto { width: 100%; height: 100%; background-size: contain; background-position: bottom right; background-repeat: no-repeat; }
+.slide.tem-foto .corpo { padding-right: 300px; }
+
+/* ── correções de contraste e aninhamento ─────────────────────────────────── */
+
+/* destaque dentro de uma área já amarela não vira caixa dentro de caixa */
+.slide .faixa .hl,
+.slide .gancho .hl,
+.slide .cta-caixa .hl,
+.slide .passos .n .hl {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* em fundo claro o acento é a tinta escura: amarelo sobre creme não se lê */
+.slide.fundo-claro,
+.slide.fundo-creme { --acento: var(--escuro); }
+.slide.fundo-escuro,
+.slide.fundo-medio,
+.slide.fundo-foto { --acento: var(--amarelo); }
+
+.slide .label,
+.slide .arraste { color: var(--acento); }
+.slide .lista li::before { background: var(--acento); }
+
+/* o número grande: amarelo sobre escuro, caixa amarela sobre claro */
+.slide .metrica .valor { color: var(--amarelo); }
+.slide.fundo-claro .metrica .valor,
+.slide.fundo-creme .metrica .valor {
+  color: var(--tinta-clara);
+  background: var(--amarelo);
+  align-self: flex-start;
+  padding: 0 0.1em 0.06em;
+  border-radius: 6px;
+}
+.slide .metrica .unidade { color: var(--tinta); }

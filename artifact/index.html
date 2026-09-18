@@ -1,0 +1,2031 @@
+<title>Carrossel No Controle</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+/* ── tokens do app (a identidade da marca manda; neutros puxados para o marinho) ── */
+:root {
+  --marinho: #0D2B5E;
+  --azul: #1A4A9C;
+  --ambar: #F5C842;
+
+  --fundo: #EEF1F6;
+  --superficie: #FFFFFF;
+  --superficie-2: #F6F8FB;
+  --borda: #D3DCEA;
+  --tinta: #0D2B5E;
+  --tinta-fraca: #5A6C8C;
+  --sombra: 0 1px 2px rgba(13, 43, 94, 0.06), 0 8px 24px rgba(13, 43, 94, 0.07);
+  --ok: #17754A;
+  --alerta: #9A6206;
+  --erro: #A62A21;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fundo: #07162E;
+    --superficie: #0E2551;
+    --superficie-2: #0B1E43;
+    --borda: #1F4076;
+    --tinta: #E8EFFA;
+    --tinta-fraca: #9CB2D4;
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+    --ok: #59C48E;
+    --alerta: #F0BE58;
+    --erro: #F08279;
+  }
+}
+:root[data-theme="dark"] {
+  --fundo: #07162E;
+  --superficie: #0E2551;
+  --superficie-2: #0B1E43;
+  --borda: #1F4076;
+  --tinta: #E8EFFA;
+  --tinta-fraca: #9CB2D4;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+  --ok: #59C48E;
+  --alerta: #F0BE58;
+  --erro: #F08279;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: Nunito, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.envoltorio { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+
+/* ── barra ───────────────────────────────────────────────────────────────── */
+
+.barra {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 40;
+  background: color-mix(in srgb, var(--fundo) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--borda);
+}
+.barra-in {
+  max-width: 1240px; margin: 0 auto; padding-inline: 16px;
+  display: flex; align-items: center; gap: 12px; min-height: 56px; flex-wrap: wrap;
+}
+.marca { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: -0.01em; }
+.marca .pastilha {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--ambar); color: var(--ambar);
+  display: grid; place-items: center; font-size: 11px; font-weight: 900;
+}
+.barra .espaco { flex: 1 1 auto; }
+@media (max-width: 560px) {
+  .barra-in { gap: 8px; min-height: 50px; }
+  .chip { font-size: 11px; padding: 3px 8px; letter-spacing: 0.02em; }
+  #btnTema { font-size: 12px; padding: 5px 9px; }
+}
+
+.chip {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--borda);
+  color: var(--tinta-fraca); background: var(--superficie);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.chip .ponto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.ligado { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--borda)); }
+.chip.manual { color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 40%, var(--borda)); }
+
+/* ── abas ────────────────────────────────────────────────────────────────── */
+
+.abas { display: flex; gap: 4px; margin: 20px 0 16px; }
+.aba {
+  appearance: none; border: 1px solid transparent; background: transparent; cursor: pointer;
+  font: inherit; font-weight: 800; color: var(--tinta-fraca);
+  padding: 8px 14px; border-radius: 8px;
+}
+.aba[aria-selected="true"] { background: var(--superficie); border-color: var(--borda); color: var(--tinta); box-shadow: var(--sombra); }
+
+/* ── grade ───────────────────────────────────────────────────────────────── */
+
+.grade { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .grade { grid-template-columns: minmax(0, 1fr); } }
+
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--sombra);
+}
+.cartao + .cartao { margin-top: 16px; }
+.cartao h2 { margin: 0 0 14px; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-fraca); }
+.cartao h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; }
+
+.campo { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.campo > label { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-fraca); }
+.campo .dica { font-size: 12px; color: var(--tinta-fraca); font-weight: 500; }
+
+input[type="text"], input[type="number"], textarea, select {
+  font: inherit; color: var(--tinta); background: var(--superficie-2);
+  border: 1px solid var(--borda); border-radius: 9px; padding: 9px 11px; width: 100%;
+}
+textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, .thumb:focus-visible {
+  outline: 2px solid var(--azul); outline-offset: 2px;
+}
+input[type="range"] { width: 100%; accent-color: var(--azul); }
+
+.linha { display: flex; gap: 10px; flex-wrap: wrap; }
+.linha > * { flex: 1 1 130px; }
+
+.btn {
+  appearance: none; font: inherit; font-weight: 800; cursor: pointer;
+  border-radius: 9px; padding: 10px 14px; border: 1px solid transparent;
+  background: var(--marinho); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+.btn.principal { background: var(--ambar); color: #2A1F00; }
+.btn.fantasma { background: transparent; color: var(--tinta); border-color: var(--borda); }
+.btn.pequeno { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+.btn.largo { width: 100%; }
+
+.aviso { font-size: 13px; border-radius: 9px; padding: 10px 12px; border: 1px solid var(--borda); background: var(--superficie-2); }
+.aviso.erro { color: var(--erro); border-color: color-mix(in srgb, var(--erro) 35%, var(--borda)); }
+.aviso.alerta { color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 35%, var(--borda)); }
+.aviso.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--borda)); }
+
+.fluxo { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.5;
+  max-height: 150px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+  background: var(--superficie-2); border: 1px solid var(--borda); border-radius: 9px; padding: 10px; color: var(--tinta-fraca); }
+
+/* ── deck ────────────────────────────────────────────────────────────────── */
+
+.tira { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.thumb {
+  flex: 0 0 auto; width: 84px; padding: 0; border: 2px solid transparent; border-radius: 8px;
+  background: none; cursor: pointer; position: relative;
+}
+.thumb[aria-current="true"] { border-color: var(--ambar); }
+.thumb .moldura { pointer-events: none; }
+.thumb .n {
+  position: absolute; right: 4px; bottom: 4px; font-size: 10px; font-weight: 800;
+  background: rgba(13, 43, 94, 0.82); color: #fff; border-radius: 4px; padding: 1px 4px;
+}
+
+.moldura { position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 10px; background: var(--marinho); }
+.moldura > .slide { position: absolute; top: 0; left: 0; transform-origin: top left; }
+
+.palco { display: grid; gap: 16px; }
+@media (min-width: 1000px) { .palco { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; } }
+
+.editor .campo:last-child { margin-bottom: 0; }
+.editor-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.tipo-slide { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ambar); }
+
+.prompt-img {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  background: var(--superficie-2); border: 1px dashed var(--borda); border-radius: 9px; padding: 10px;
+  color: var(--tinta-fraca); white-space: pre-wrap; word-break: break-word;
+}
+
+.lista-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; }
+.lista-hist button {
+  width: 100%; text-align: left; font: inherit; cursor: pointer;
+  background: var(--superficie-2); border: 1px solid var(--borda); border-radius: 9px; padding: 9px 11px; color: var(--tinta);
+}
+.lista-hist .quando { display: block; font-size: 12px; color: var(--tinta-fraca); font-weight: 600; }
+
+.legenda-txt { white-space: pre-wrap; font-size: 14px; line-height: 1.55; }
+.hashtags { color: var(--azul); font-weight: 700; }
+:root[data-theme="dark"] .hashtags, :root:not([data-theme="light"]) .hashtags { color: var(--ambar); }
+
+/* ── teleprompter ────────────────────────────────────────────────────────── */
+
+#teleprompter[hidden] { display: none; }
+#teleprompter {
+  position: fixed; inset: 0; z-index: 90; background: #06132A; color: #fff;
+  display: flex; flex-direction: column; padding: 24px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+#teleprompter .rolagem { flex: 1 1 auto; overflow: hidden; }
+#teleprompter .texto { font-size: clamp(26px, 5.4vw, 46px); font-weight: 800; line-height: 1.34; max-width: 22ch; margin: 0 auto; }
+#teleprompter .texto p { margin: 0 0 0.8em; }
+#teleprompter .controles { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; padding-top: 12px; }
+
+/* ── palco de exportação (fora da tela, tamanho real) ────────────────────── */
+#exportacao { position: fixed; left: -12000px; top: 0; width: 1080px; height: 1350px; overflow: hidden; }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<style>
+/* ──────────────────────────────────────────────────────────────────────────
+   Motor de layout dos carrosséis — No Controle (@profellyssonrocha)
+   Usado pela CLI (Playwright) e pelo artifact publicado. Fonte única.
+   Formato: 1080 x 1350. Grid base 4px. Máximo de 3 cores por peça.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.slide {
+  --escuro: #0D2B5E;
+  --medio: #1A4A9C;
+  --claro: #F4F5F7;
+  --creme: #FFF7E0;
+  --amarelo: #F5C842;
+  --branco: #FFFFFF;
+  --tinta-clara: #2A1F00;
+
+  --pad: 72px;
+  --k: 1; /* multiplicador de auto-ajuste tipográfico */
+  --tinta: var(--branco);
+  --tinta-destaque: var(--escuro);
+  --fundo: var(--escuro);
+
+  position: relative;
+  box-sizing: border-box;
+  width: 1080px;
+  height: 1350px;
+  padding: var(--pad);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: Nunito, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.slide.fundo-escuro { --fundo: var(--escuro); --tinta: var(--branco); --tinta-destaque: var(--escuro); }
+.slide.fundo-medio  { --fundo: var(--medio);  --tinta: var(--branco); --tinta-destaque: var(--escuro); }
+.slide.fundo-claro  { --fundo: var(--claro);  --tinta: var(--escuro); --tinta-destaque: var(--tinta-clara); }
+.slide.fundo-creme  { --fundo: var(--creme);  --tinta: var(--escuro); --tinta-destaque: var(--tinta-clara); }
+.slide.fundo-foto   { --fundo: var(--escuro); --tinta: var(--branco); --tinta-destaque: var(--escuro); }
+
+/* ── cabeçalho e rodapé fixos ─────────────────────────────────────────────── */
+
+.slide .hdr,
+.slide .ftr {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  flex: 0 0 auto;
+}
+
+.slide .hdr > span { flex: 1 1 0; }
+.slide .hdr > span:nth-child(2) { text-align: center; }
+.slide .hdr > span:nth-child(3) { text-align: right; }
+
+.slide .ftr { margin-top: auto; padding-top: 24px; font-size: 16px; }
+.slide .ftr .traco { display: block; width: 40px; height: 3px; background: currentColor; opacity: 0.6; }
+.slide .ftr .num { font-variant-numeric: tabular-nums; }
+
+/* ── corpo ────────────────────────────────────────────────────────────────── */
+
+.slide .corpo {
+  position: relative;
+  z-index: 3;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(40px * var(--k));
+  padding: 40px 0 24px;
+  min-height: 0;
+}
+
+.slide .corpo.topo { justify-content: flex-start; }
+.slide .corpo.base { justify-content: flex-end; }
+
+/* ── primitivas de texto ──────────────────────────────────────────────────── */
+
+.slide .label {
+  font-size: calc(20px * var(--k));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+.slide .titulo {
+  font-size: calc(46px * var(--k));
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.slide .texto {
+  font-size: calc(30px * var(--k));
+  font-weight: 400;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 88%;
+}
+
+.slide .fonte {
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 0.66;
+  margin: 0;
+}
+
+/* retângulo amarelo atrás da palavra-chave — nunca texto branco sobre amarelo */
+.slide .hl {
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  padding: 0.04em 0.18em 0.1em;
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.slide .forte { font-weight: 800; }
+
+/* ── capa ─────────────────────────────────────────────────────────────────── */
+
+.slide.tipo-capa { padding-bottom: 56px; }
+
+.slide .capa-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.slide .capa-veu {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(13, 43, 94, 0.72) 0%, rgba(13, 43, 94, 0.18) 34%, rgba(13, 43, 94, 0.88) 72%, rgba(13, 43, 94, 0.97) 100%);
+}
+
+.slide.tipo-capa .corpo { justify-content: flex-end; gap: 32px; }
+
+.slide .selo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  align-self: flex-start;
+}
+
+.slide .selo-foto {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--amarelo);
+  background-color: var(--medio);
+  background-size: cover;
+  background-position: center;
+}
+
+.slide .selo-marca {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--amarelo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--amarelo);
+}
+
+.slide .selo-nome { font-size: calc(22px * var(--k)); font-weight: 800; letter-spacing: 0.02em; }
+
+.slide .capa-titulo {
+  font-size: calc(92px * var(--k));
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.slide .gancho {
+  align-self: flex-start;
+  background: var(--amarelo);
+  color: var(--escuro);
+  font-size: calc(38px * var(--k));
+  font-weight: 800;
+  line-height: 1.24;
+  padding: 18px 26px 22px;
+  border-radius: 6px;
+  max-width: 92%;
+}
+
+.slide .arraste {
+  font-size: calc(20px * var(--k));
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+/* ── faixa amarela (slide-tese do briefing) ───────────────────────────────── */
+
+.slide .faixa {
+  align-self: flex-start;
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  font-size: calc(56px * var(--k));
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  padding: 14px 24px 20px;
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+/* ── imagem interna ───────────────────────────────────────────────────────── */
+
+.slide .figura { margin: 0; flex: 0 0 auto; }
+
+.slide .figura .foto {
+  width: 100%;
+  height: 384px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.08);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.slide .figura.retrato .foto { height: 540px; }
+.slide .figura figcaption { margin-top: 12px; font-size: calc(16px * var(--k)); font-weight: 600; opacity: 0.6; }
+
+/* ── lista ────────────────────────────────────────────────────────────────── */
+
+.slide .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
+
+.slide .lista li {
+  position: relative;
+  padding-left: 40px;
+  font-size: calc(28px * var(--k));
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.slide .lista li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.48em;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--amarelo);
+}
+
+/* ── passos numerados ─────────────────────────────────────────────────────── */
+
+.slide .passos { display: flex; flex-direction: column; gap: 28px; margin: 0; padding: 0; list-style: none; }
+
+.slide .passos li { display: flex; gap: 24px; align-items: flex-start; }
+
+.slide .passos .n {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  font-size: calc(28px * var(--k));
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide .passos .p-titulo { font-size: calc(28px * var(--k)); font-weight: 800; line-height: 1.25; }
+.slide .passos .p-texto { font-size: calc(24px * var(--k)); font-weight: 400; line-height: 1.38; opacity: 0.9; margin-top: 6px; }
+
+/* ── métrica ──────────────────────────────────────────────────────────────── */
+
+.slide .metrica { display: flex; flex-direction: column; gap: 8px; }
+.slide .metrica .valor { font-size: calc(170px * var(--k)); font-weight: 900; line-height: 0.92; letter-spacing: -0.04em; color: var(--amarelo); }
+.slide .metrica .unidade { font-size: calc(26px * var(--k)); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+
+/* ── barras ───────────────────────────────────────────────────────────────── */
+
+.slide .barras { display: flex; flex-direction: column; gap: 24px; }
+.slide .barra .barra-topo { display: flex; justify-content: space-between; align-items: baseline; font-size: calc(24px * var(--k)); font-weight: 700; margin-bottom: 10px; }
+.slide .barra .barra-valor { font-variant-numeric: tabular-nums; font-weight: 800; }
+.slide .barra .trilho { height: 28px; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 14%, transparent); overflow: hidden; }
+.slide .barra .preenche { height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 34%, transparent); }
+.slide .barra.destaque .preenche { background: var(--amarelo); }
+.slide .barra.destaque .barra-topo { color: var(--tinta); }
+
+/* ── tese (fundo creme, tipografia grande) ────────────────────────────────── */
+
+.slide.tipo-tese .corpo { gap: 32px; }
+.slide .tese-texto { font-size: calc(58px * var(--k)); font-weight: 900; line-height: 1.14; letter-spacing: -0.025em; margin: 0; }
+.slide .assinatura { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+
+/* ── encerramento ─────────────────────────────────────────────────────────── */
+
+.slide.tipo-cta .corpo { gap: 32px; }
+.slide .cta-titulo { font-size: calc(62px * var(--k)); font-weight: 900; line-height: 1.1; letter-spacing: -0.025em; margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.slide .cta-caixa { background: var(--amarelo); color: var(--tinta-destaque); padding: 10px 22px 16px; border-radius: 6px; }
+.slide .cta-acao { font-size: calc(30px * var(--k)); font-weight: 800; line-height: 1.35; }
+.slide .cta-foto { position: absolute; right: 0; bottom: 0; width: 420px; height: 620px; z-index: 2; }
+.slide .cta-foto .foto { width: 100%; height: 100%; background-size: contain; background-position: bottom right; background-repeat: no-repeat; }
+.slide.tem-foto .corpo { padding-right: 300px; }
+
+/* ── correções de contraste e aninhamento ─────────────────────────────────── */
+
+/* destaque dentro de uma área já amarela não vira caixa dentro de caixa */
+.slide .faixa .hl,
+.slide .gancho .hl,
+.slide .cta-caixa .hl,
+.slide .passos .n .hl {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* em fundo claro o acento é a tinta escura: amarelo sobre creme não se lê */
+.slide.fundo-claro,
+.slide.fundo-creme { --acento: var(--escuro); }
+.slide.fundo-escuro,
+.slide.fundo-medio,
+.slide.fundo-foto { --acento: var(--amarelo); }
+
+.slide .label,
+.slide .arraste { color: var(--acento); }
+.slide .lista li::before { background: var(--acento); }
+
+/* o número grande: amarelo sobre escuro, caixa amarela sobre claro */
+.slide .metrica .valor { color: var(--amarelo); }
+.slide.fundo-claro .metrica .valor,
+.slide.fundo-creme .metrica .valor {
+  color: var(--tinta-clara);
+  background: var(--amarelo);
+  align-self: flex-start;
+  padding: 0 0.1em 0.06em;
+  border-radius: 6px;
+}
+.slide .metrica .unidade { color: var(--tinta); }
+</style>
+
+<div class="barra">
+  <div class="barra-in">
+    <span class="marca"><span class="pastilha">NC</span> Carrossel No Controle</span>
+    <span class="espaco"></span>
+    <span class="chip" id="chipIA"><span class="ponto"></span> verificando</span>
+    <button class="btn fantasma pequeno" id="btnTema" type="button">Tema claro/escuro</button>
+  </div>
+</div>
+
+<div class="envoltorio">
+  <div class="abas" role="tablist">
+    <button class="aba" id="abaCarrossel" role="tab" aria-selected="true" aria-controls="painelCarrossel" type="button">Carrossel</button>
+    <button class="aba" id="abaReels" role="tab" aria-selected="false" aria-controls="painelReels" type="button">Roteiro de Reels</button>
+  </div>
+
+  <!-- ── CARROSSEL ─────────────────────────────────────────────────────── -->
+  <div id="painelCarrossel" role="tabpanel" aria-labelledby="abaCarrossel">
+    <div class="grade">
+      <div>
+        <section class="cartao">
+          <h2>1 · Tema</h2>
+          <div class="campo">
+            <label for="tema">Assunto do carrossel</label>
+            <textarea id="tema" placeholder="Ex.: por que a taxa de acerto cai na semana da prova"></textarea>
+          </div>
+          <div class="campo">
+            <label for="tipo">Linha editorial</label>
+            <select id="tipo"></select>
+            <span class="dica" id="dicaTipo"></span>
+          </div>
+          <div class="linha">
+            <div class="campo">
+              <label for="nslides">Slides: <span id="nslidesVal">9</span></label>
+              <input type="range" id="nslides" min="6" max="10" value="9">
+            </div>
+            <div class="campo">
+              <label for="cta">Palavra do CTA</label>
+              <input type="text" id="cta" value="CONTROLE">
+            </div>
+          </div>
+          <div class="campo">
+            <label for="contexto">Contexto verificado (opcional)</label>
+            <textarea id="contexto" placeholder="Cole o trecho do acórdão, do edital ou os números do aluno. Isso vira a matéria-prima do carrossel."></textarea>
+            <span class="dica">Sem contexto, o texto fica no terreno do método e não inventa número.</span>
+          </div>
+          <div class="linha">
+            <button class="btn principal" id="btnGerar" type="button">Escrever carrossel</button>
+            <button class="btn fantasma" id="btnParar" type="button" hidden>Parar</button>
+          </div>
+          <div id="estadoGeracao" class="aviso" hidden></div>
+          <pre class="fluxo" id="fluxo" hidden></pre>
+        </section>
+
+        <section class="cartao" id="cartaoManual">
+          <h2>Modo diagramador</h2>
+          <p class="dica" style="margin-top:0">Cole aqui um carrossel em JSON (o mesmo formato que a CLI grava em <code>carrossel.json</code>) e a página diagrama e exporta.</p>
+          <div class="campo">
+            <textarea id="colarJson" placeholder='{"meta":{...},"slides":[...]}'></textarea>
+          </div>
+          <button class="btn fantasma largo" id="btnColar" type="button">Carregar JSON</button>
+        </section>
+
+        <section class="cartao">
+          <h2>Histórico</h2>
+          <ul class="lista-hist" id="historico"></ul>
+          <p class="dica" id="semHistorico">Os carrosséis gerados ficam salvos aqui.</p>
+        </section>
+      </div>
+
+      <div>
+        <section class="cartao" id="cartaoDeck" hidden>
+          <div class="editor-topo">
+            <h2 style="margin:0" id="tituloDeck">2 · Revisar</h2>
+            <div class="linha" style="flex:0 0 auto">
+              <button class="btn fantasma pequeno" id="btnLint" type="button">Conferir voz da marca</button>
+            </div>
+          </div>
+          <div class="tira" id="tira"></div>
+          <div id="lintSaida" class="aviso" hidden style="margin-top:12px"></div>
+
+          <div class="palco" style="margin-top:16px">
+            <div class="moldura" id="molduraPalco"></div>
+            <div class="editor" id="editor"></div>
+          </div>
+        </section>
+
+        <section class="cartao" id="cartaoExport" hidden>
+          <h2>3 · Publicar</h2>
+          <div class="linha">
+            <button class="btn principal" id="btnZip" type="button">Baixar tudo (.zip)</button>
+            <button class="btn fantasma" id="btnPng" type="button">Baixar este slide</button>
+            <button class="btn fantasma" id="btnCopiarLegenda" type="button">Copiar legenda</button>
+          </div>
+          <div id="estadoExport" class="aviso" hidden style="margin-top:12px"></div>
+          <h3 style="margin-top:18px">Legenda</h3>
+          <div class="legenda-txt" id="legendaTxt" contenteditable="true" spellcheck="false"></div>
+          <p class="hashtags" id="hashtagsTxt"></p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REELS ─────────────────────────────────────────────────────────── -->
+  <div id="painelReels" role="tabpanel" aria-labelledby="abaReels" hidden>
+    <div class="grade">
+      <section class="cartao">
+        <h2>Roteiro</h2>
+        <div class="campo">
+          <label for="temaReels">Assunto do vídeo</label>
+          <textarea id="temaReels" placeholder="Ex.: o erro de revisar o que você já acerta"></textarea>
+        </div>
+        <div class="linha">
+          <button class="btn principal" id="btnRoteiro" type="button">Escrever roteiro</button>
+          <button class="btn fantasma" id="btnPararRoteiro" type="button" hidden>Parar</button>
+        </div>
+        <div id="estadoRoteiro" class="aviso" hidden style="margin-top:12px"></div>
+      </section>
+
+      <section class="cartao" id="cartaoRoteiro" hidden>
+        <div class="editor-topo">
+          <h2 style="margin:0">Leitura</h2>
+          <div class="linha" style="flex:0 0 auto">
+            <button class="btn pequeno" id="btnTeleprompter" type="button">Abrir teleprompter</button>
+            <button class="btn fantasma pequeno" id="btnBaixarRoteiro" type="button">Baixar .txt</button>
+          </div>
+        </div>
+        <div id="roteiroSaida"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="teleprompter" hidden>
+  <div class="rolagem"><div class="texto" id="tpTexto"></div></div>
+  <div class="controles">
+    <button class="btn principal" id="tpPlay" type="button">Iniciar</button>
+    <label for="tpVel" style="font-weight:700">Velocidade</label>
+    <input type="range" id="tpVel" min="10" max="120" value="46" style="width:160px">
+    <button class="btn fantasma" id="tpFechar" type="button">Fechar</button>
+  </div>
+</div>
+
+<div id="exportacao" aria-hidden="true"></div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   Motor de layout — funções puras, sem dependência.
+   Roda no Node (CLI/Playwright) e dentro do artifact publicado.
+   Marcação inline aceita nos textos:
+     **palavra**  → retângulo amarelo atrás da palavra
+     *palavra*    → negrito
+   ────────────────────────────────────────────────────────────────────────── */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.CarrosselLayout = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  var TIPOS = ["capa", "texto", "imagem", "faixa", "lista", "passos", "metrica", "barras", "tese", "cta"];
+  var FUNDOS = ["escuro", "claro", "medio", "creme"];
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  /** Escapa e aplica a marcação inline da marca. */
+  function rico(s) {
+    return esc(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<span class="hl">$1</span>')
+      .replace(/\*([^*]+)\*/g, '<span class="forte">$1</span>')
+      .replace(/\n/g, "<br>");
+  }
+
+  /** Texto puro (sem marcação) — para contagem de palavras e lint. */
+  function limpo(s) {
+    return String(s == null ? "" : s).replace(/\*/g, "");
+  }
+
+  /**
+   * Ritmo de fundos: nunca dois iguais em sequência.
+   * Capa é sempre foto, tese é sempre creme, encerramento é sempre sólido escuro.
+   */
+  function planoDeFundos(slides) {
+    var anterior = null;
+    var giro = 0;
+    return slides.map(function (s) {
+      var fundo = s.fundo;
+      if (!fundo) {
+        if (s.tipo === "capa") fundo = "foto";
+        else if (s.tipo === "tese") fundo = "creme";
+        else if (s.tipo === "cta") fundo = anterior === "escuro" ? "medio" : "escuro";
+        else {
+          for (var i = 0; i < FUNDOS.length; i++) {
+            var cand = FUNDOS[(giro + i) % FUNDOS.length];
+            if (cand !== anterior) { fundo = cand; giro = (giro + i + 1) % FUNDOS.length; break; }
+          }
+        }
+      }
+      if (fundo === anterior && fundo !== "foto") {
+        fundo = fundo === "escuro" ? "medio" : fundo === "medio" ? "escuro" : fundo === "claro" ? "creme" : "claro";
+      }
+      anterior = fundo;
+      return fundo;
+    });
+  }
+
+  /* Imagens entram como background-image: é o que renderiza igual no
+     Playwright e na captura do artifact (object-fit não sobrevive à captura). */
+  function foto(src, classe) {
+    if (!src) return "";
+    var limpa = String(src).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    return '<div class="' + classe + '" style="background-image:url(\'' + limpa + '\')"></div>';
+  }
+
+  function label(s) {
+    return s.label ? '<div class="label">' + esc(s.label) + "</div>" : "";
+  }
+
+  function fonteNota(s) {
+    return s.fonte ? '<p class="fonte">' + rico(s.fonte) + "</p>" : "";
+  }
+
+  function corpoTexto(s) {
+    return s.corpo ? '<p class="texto">' + rico(s.corpo) + "</p>" : "";
+  }
+
+  // ── renderizadores por tipo ───────────────────────────────────────────────
+
+  var RENDER = {
+    capa: function (s, ctx) {
+      var capa = ctx.imagem(s.imagem);
+      var selo = s.selo && s.selo.foto
+        ? foto(ctx.imagem({ arquivo: s.selo.foto }), "selo-foto")
+        : '<div class="selo-marca">NC</div>';
+      return (
+        foto(capa, "capa-img") +
+        '<div class="capa-veu"></div>' +
+        '<div class="corpo base">' +
+          '<div class="selo">' + selo + '<span class="selo-nome">' + esc(ctx.handle) + "</span></div>" +
+          '<h1 class="capa-titulo">' + rico(s.titulo) + "</h1>" +
+          (s.gancho ? '<div class="gancho">' + rico(s.gancho) + "</div>" : "") +
+          '<div class="arraste">' + esc(s.arraste || "Arraste para o lado ›››") + "</div>" +
+        "</div>"
+      );
+    },
+
+    texto: function (s) {
+      return (
+        '<div class="corpo">' +
+          label(s) +
+          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          corpoTexto(s) +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    imagem: function (s, ctx) {
+      var src = ctx.imagem(s.imagem);
+      return (
+        '<div class="corpo">' +
+          label(s) +
+          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (src
+            ? '<figure class="figura' + (s.retrato ? " retrato" : "") + '">' +
+                foto(src, "foto") +
+                (s.credito ? "<figcaption>" + esc(s.credito) + "</figcaption>" : "") +
+              "</figure>"
+            : "") +
+          corpoTexto(s) +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    faixa: function (s) {
+      var itens = (s.itens || []).map(function (i) { return "<li>" + rico(i) + "</li>"; }).join("");
+      return (
+        '<div class="corpo">' +
+          (s.intro ? '<p class="texto">' + rico(s.intro) + "</p>" : "") +
+          (s.faixa ? '<div class="faixa">' + rico(s.faixa) + "</div>" : "") +
+          (itens ? '<ul class="lista">' + itens + "</ul>" : "") +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    lista: function (s) {
+      var itens = (s.itens || []).map(function (i) { return "<li>" + rico(i) + "</li>"; }).join("");
+      return (
+        '<div class="corpo">' +
+          label(s) +
+          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          (itens ? '<ul class="lista">' + itens + "</ul>" : "") +
+          corpoTexto(s) +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    passos: function (s) {
+      var itens = (s.passos || []).map(function (p, i) {
+        return (
+          "<li>" +
+            '<span class="n">' + (i + 1) + "</span>" +
+            "<div>" +
+              '<div class="p-titulo">' + rico(p.titulo || p) + "</div>" +
+              (p.texto ? '<div class="p-texto">' + rico(p.texto) + "</div>" : "") +
+            "</div>" +
+          "</li>"
+        );
+      }).join("");
+      return (
+        '<div class="corpo">' +
+          label(s) +
+          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          '<ol class="passos">' + itens + "</ol>" +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    metrica: function (s) {
+      return (
+        '<div class="corpo">' +
+          label(s) +
+          '<div class="metrica">' +
+            '<div class="valor">' + esc(s.valor) + "</div>" +
+            (s.unidade ? '<div class="unidade">' + esc(s.unidade) + "</div>" : "") +
+          "</div>" +
+          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          corpoTexto(s) +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    barras: function (s) {
+      var dados = s.dados || [];
+      var max = dados.reduce(function (m, d) { return Math.max(m, Number(d.valor) || 0); }, 0) || 1;
+      var barras = dados.map(function (d) {
+        var pct = Math.max(2, Math.round(((Number(d.valor) || 0) / max) * 100));
+        return (
+          '<div class="barra' + (d.destaque ? " destaque" : "") + '">' +
+            '<div class="barra-topo"><span>' + esc(d.rotulo) + '</span>' +
+            '<span class="barra-valor">' + esc(d.exibicao != null ? d.exibicao : d.valor) + "</span></div>" +
+            '<div class="trilho"><div class="preenche" style="width:' + pct + '%"></div></div>' +
+          "</div>"
+        );
+      }).join("");
+      return (
+        '<div class="corpo">' +
+          label(s) +
+          (s.titulo ? '<h2 class="titulo">' + rico(s.titulo) + "</h2>" : "") +
+          '<div class="barras">' + barras + "</div>" +
+          corpoTexto(s) +
+          fonteNota(s) +
+        "</div>"
+      );
+    },
+
+    tese: function (s, ctx) {
+      return (
+        '<div class="corpo">' +
+          '<p class="tese-texto">' + rico(s.texto) + "</p>" +
+          '<div class="assinatura">' + esc(s.assinatura || ctx.handle) + "</div>" +
+        "</div>"
+      );
+    },
+
+    cta: function (s, ctx) {
+      var retrato = ctx.imagem(s.imagem);
+      return (
+        (retrato ? '<div class="cta-foto">' + foto(retrato, "foto") + "</div>" : "") +
+        '<div class="corpo">' +
+          '<h2 class="cta-titulo">' +
+            "<span>" + rico(s.titulo) + "</span>" +
+            (s.destaque ? '<span class="cta-caixa">' + rico(s.destaque) + "</span>" : "") +
+          "</h2>" +
+          corpoTexto(s) +
+          (s.acao ? '<div class="cta-acao">' + rico(s.acao) + "</div>" : "") +
+        "</div>"
+      );
+    }
+  };
+
+  /** HTML de um slide inteiro, já com cabeçalho e rodapé fixos. */
+  function renderSlide(slide, opcoes) {
+    var o = opcoes || {};
+    var ctx = {
+      handle: o.handle || "@profellyssonrocha",
+      imagem: o.imagem || function () { return null; }
+    };
+    var tipo = TIPOS.indexOf(slide.tipo) >= 0 ? slide.tipo : "texto";
+    var fundo = slide.fundo || (tipo === "capa" ? "foto" : "escuro");
+    var cab = o.cabecalho || {};
+    var temFoto = tipo === "cta" && ctx.imagem(slide.imagem);
+    var classes = ["slide", "tipo-" + tipo, "fundo-" + fundo].concat(temFoto ? ["tem-foto"] : []);
+
+    var rodape = o.total
+      ? '<footer class="ftr"><span class="traco"></span><span class="num">' +
+        esc(o.indice) + " / " + esc(o.total) + "</span></footer>"
+      : "";
+
+    return (
+      '<section class="' + classes.join(" ") + '" data-indice="' + esc(o.indice || 1) + '">' +
+        '<header class="hdr"><span>' + esc(cab.esquerda || "") + "</span>" +
+        "<span>" + esc(cab.centro || ctx.handle) + "</span>" +
+        "<span>" + esc(cab.direita || "") + "</span></header>" +
+        RENDER[tipo](slide, ctx) +
+        rodape +
+      "</section>"
+    );
+  }
+
+  /** HTML de todos os slides, com o ritmo de fundos já aplicado. */
+  function renderDeck(carrossel, opcoes) {
+    var o = opcoes || {};
+    var slides = carrossel.slides || [];
+    var fundos = planoDeFundos(slides);
+    return slides.map(function (s, i) {
+      var comFundo = Object.assign({}, s, { fundo: s.fundo || fundos[i] });
+      return renderSlide(comFundo, Object.assign({}, o, { indice: i + 1, total: slides.length }));
+    }).join("\n");
+  }
+
+  /**
+   * Auto-ajuste tipográfico: reduz --k até o conteúdo caber na moldura.
+   * Roda no browser e dentro do Playwright — nenhum texto é cortado.
+   */
+  function ajustar(slideEl) {
+    var corpo = slideEl.querySelector(".corpo");
+    if (!corpo) return 1;
+    var k = 1;
+    slideEl.style.setProperty("--k", k);
+    var guarda = 0;
+    while (corpo.scrollHeight > corpo.clientHeight + 1 && k > 0.62 && guarda++ < 40) {
+      k = Math.round((k - 0.02) * 100) / 100;
+      slideEl.style.setProperty("--k", k);
+    }
+    return k;
+  }
+
+  function ajustarTodos(raiz) {
+    var els = (raiz || document).querySelectorAll(".slide");
+    for (var i = 0; i < els.length; i++) ajustar(els[i]);
+  }
+
+  return {
+    TIPOS: TIPOS,
+    FUNDOS: FUNDOS,
+    esc: esc,
+    rico: rico,
+    limpo: limpo,
+    planoDeFundos: planoDeFundos,
+    renderSlide: renderSlide,
+    renderDeck: renderDeck,
+    ajustar: ajustar,
+    ajustarTodos: ajustarTodos
+  };
+});
+</script>
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   Pacote de instruções enviado ao Claude a cada geração.
+   Não existe memória entre chamadas: tudo o que a voz da marca precisa vai
+   aqui dentro, montado a partir de brand/brand.json. Arquivo compartilhado
+   pela CLI e pelo artifact publicado — regra escrita uma vez só.
+   ────────────────────────────────────────────────────────────────────────── */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.CarrosselPrompt = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  var CONTRATO_SLIDES = [
+    '{"tipo":"capa","titulo":"até 8 palavras, sentence case, com **palavra** marcada","gancho":"pergunta-gancho curta da caixa amarela","imagem":{"prompt":"prompt de imagem em inglês"}}',
+    '{"tipo":"faixa","intro":"parágrafo de abertura","faixa":"título curto da seção, até 4 palavras","itens":["bullet","bullet"]}',
+    '{"tipo":"texto","label":"LABEL OPCIONAL","titulo":"título do slide","corpo":"parágrafo de 40 a 70 palavras","fonte":"Fonte: veículo/documento (opcional)"}',
+    '{"tipo":"imagem","titulo":"título","imagem":{"prompt":"prompt de imagem em inglês"},"corpo":"parágrafo de apoio","credito":"legenda curta opcional"}',
+    '{"tipo":"lista","titulo":"título","itens":["item","item","item","item"]}',
+    '{"tipo":"passos","titulo":"título","passos":[{"titulo":"passo","texto":"uma linha"}]}',
+    '{"tipo":"metrica","valor":"745.368","unidade":"MENÇÕES EM 7 DIAS","titulo":"o que o número significa","corpo":"parágrafo curto","fonte":"Fonte: ..."}',
+    '{"tipo":"barras","titulo":"título","dados":[{"rotulo":"Item","valor":40,"exibicao":"40%","destaque":true}],"fonte":"Fonte: ..."}',
+    '{"tipo":"tese","texto":"frase-tese de uma ou duas linhas, com **palavra** marcada"}',
+    '{"tipo":"cta","titulo":"primeira linha","destaque":"segunda linha (vai dentro da caixa amarela)","corpo":"duas linhas de contexto","acao":"Comenta **PALAVRA** que eu te mando ... na DM."}'
+  ];
+
+  function esqueleto(n) {
+    var meio = Math.max(1, n - 5);
+    return [
+      "1. capa",
+      "2. faixa — contexto do problema, com a faixa amarela nomeando a seção",
+      "3 a " + (2 + meio) + ". desenvolvimento (" + meio + " slides): alterne entre texto, imagem, lista, passos, metrica e barras. " +
+        "Inclua pelo menos 1 slide com imagem e pelo menos 1 slide de dado (metrica ou barras).",
+      (3 + meio) + ". ressalva — o limite do argumento, o que o dado não prova, o que ainda pode mudar",
+      (4 + meio) + ". tese — a lição para quem estuda, em uma frase",
+      n + ". cta"
+    ].join("\n");
+  }
+
+  function regrasImagem(brand) {
+    var im = brand.imagem || {};
+    return [
+      "Prompts de imagem (campo imagem.prompt), escritos em inglês, 25 a 45 palavras:",
+      "- Estilo obrigatório em todo prompt: " + (im.estilo || ""),
+      "- Nunca peça: " + (im.negativo || ""),
+      "- A imagem ilustra o assunto por objeto, ambiente ou gesto — mesa de trabalho, corredor institucional, papel, mãos, sala de sessão, cronômetro. Nunca peça gráfico, número ou palavra dentro da imagem: dado é slide, não imagem.",
+      "- Nunca descreva pessoa pública real, brasão oficial ou logotipo.",
+      "- Capa em " + (im.proporcaoCapa || "4:5") + "; slides internos em " + (im.proporcaoInterna || "16:9") + "."
+    ].join("\n");
+  }
+
+  /** Instruções de voz, público e proibições — o núcleo que nunca muda. */
+  function base(brand) {
+    var v = brand.voz || {};
+    return [
+      "Você escreve carrosséis de Instagram para " + brand.marca + " (" + brand.handle + ").",
+      "Autor: " + brand.autor + ".",
+      "Público: " + brand.publico,
+      "Tese central da marca: " + brand.tese,
+      "",
+      "VOZ",
+      "- Idioma: " + v.idioma + ". Pessoa: " + v.pessoa,
+      "- Tom: " + v.tom,
+      "- Registro de referência: " + (v.registro || []).join(" / "),
+      "- " + v.casing + ".",
+      "- " + v.tamanhoSlide + ".",
+      "- Toda afirmação forte vem com número, nome, cargo ou documento. Sem número inventado: se não souber o dado, escreva o slide sem ele.",
+      "",
+      "PROIBIDO (o texto não pode soar gerado):",
+      (brand.proibicoes || []).map(function (p) { return "- " + p; }).join("\n"),
+      "",
+      "MARCAÇÃO INLINE",
+      "- **palavra** coloca o retângulo amarelo atrás da palavra. Use no máximo uma vez por slide, na ideia-chave.",
+      "- *palavra* deixa em negrito. Use com parcimônia.",
+      "- Nada de markdown além desses dois. Sem emoji em nenhum campo."
+    ].join("\n");
+  }
+
+  /**
+   * Prompt de um carrossel inteiro.
+   * opts: {tema, tipo, nSlides, palavraCta, contexto, fonte}
+   */
+  function carrossel(brand, opts) {
+    var o = opts || {};
+    var n = Math.min(10, Math.max(6, Number(o.nSlides) || 9));
+    var linha = (brand.linhasEditoriais || {})[o.tipo] || {};
+    return [
+      base(brand),
+      "",
+      "LINHA EDITORIAL: " + (linha.nome || o.tipo),
+      linha.descricao ? "- " + linha.descricao : "",
+      o.tipo === "tcu"
+        ? "- Use somente decisão publicada e informação pública, sempre com fonte no slide. Não comente processo em curso nem atribua intenção a pessoa."
+        : "",
+      "",
+      "TEMA: " + o.tema,
+      o.contexto ? "\nCONTEXTO FORNECIDO PELO AUTOR (use como matéria-prima, é verdade verificada):\n" + o.contexto : "",
+      "",
+      "ESTRUTURA — exatamente " + n + " slides, nesta ordem:",
+      esqueleto(n),
+      "",
+      "TIPOS DE SLIDE DISPONÍVEIS (use os campos exatamente como abaixo):",
+      CONTRATO_SLIDES.join("\n"),
+      "",
+      regrasImagem(brand),
+      "",
+      "PALAVRA-CHAVE DO CTA: " + (o.palavraCta || (brand.palavrasChaveCta || ["CONTROLE"])[0]) +
+        ". O último slide sempre termina pedindo o comentário com essa palavra.",
+      "",
+      "LEGENDA: 3 a 5 parágrafos curtos, repetindo a tese e o dado central, terminando em pergunta aberta para o leitor. Sem emoji.",
+      "HASHTAGS: 6 a 10, minúsculas, separadas por espaço, sem repetir a mesma raiz.",
+      "",
+      "SAÍDA — responda com um único objeto JSON válido, sem cercas de código, sem comentário, sem texto antes ou depois:",
+      '{"meta":{"tema":"","tipo":"' + (o.tipo || "") + '","linha":"' + (linha.nome || "") + '","palavraCta":"' +
+        (o.palavraCta || "CONTROLE") + '"},"slides":[...],"legenda":"","hashtags":["#..."]}'
+    ].filter(Boolean).join("\n");
+  }
+
+  /** Prompt para regerar um slide só, mantendo o resto do carrossel intacto. */
+  function slide(brand, carrosselAtual, indice, instrucao) {
+    var s = (carrosselAtual.slides || [])[indice] || {};
+    var vizinhos = (carrosselAtual.slides || []).map(function (x, i) {
+      return (i + 1) + ". [" + x.tipo + "] " + (x.titulo || x.texto || x.faixa || x.intro || "").slice(0, 90);
+    }).join("\n");
+    return [
+      base(brand),
+      "",
+      "Este é o carrossel atual, tema \"" + ((carrosselAtual.meta || {}).tema || "") + "\":",
+      vizinhos,
+      "",
+      "Reescreva SOMENTE o slide " + (indice + 1) + ", do tipo \"" + (s.tipo || "texto") + "\".",
+      "Ele não pode repetir o que os outros slides já dizem, e precisa continuar encaixando entre o anterior e o seguinte.",
+      instrucao ? "Instrução do autor: " + instrucao : "",
+      "",
+      "Slide atual:",
+      JSON.stringify(s),
+      "",
+      regrasImagem(brand),
+      "",
+      "SAÍDA — responda com um único objeto JSON do slide, com os mesmos campos do tipo, sem cercas de código e sem texto em volta."
+    ].filter(Boolean).join("\n");
+  }
+
+  /** Prompt do roteiro de Reels (30 a 45 segundos). */
+  function roteiro(brand, opts) {
+    var o = opts || {};
+    return [
+      base(brand),
+      "",
+      "Escreva um roteiro de Reels de 30 a 45 segundos sobre: " + o.tema,
+      o.contexto ? "Contexto fornecido pelo autor:\n" + o.contexto : "",
+      "Fale em voz alta, para ser lido em teleprompter: frases curtas, nada de subordinada longa.",
+      "Estime o tempo a 150 palavras por minuto.",
+      "",
+      "SAÍDA — um único objeto JSON, sem cercas de código:",
+      '{"gancho":"3 segundos, no máximo 12 palavras","blocos":[{"tempo":"0:03","texto":"..."}],',
+      '"cta":"fechamento falado","legenda":"legenda do post","hashtags":["#..."],"duracaoEstimadaSegundos":38}'
+    ].filter(Boolean).join("\n");
+  }
+
+  return { base: base, carrossel: carrossel, slide: slide, roteiro: roteiro, esqueleto: esqueleto };
+});
+</script>
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   Validação de schema + lint da voz da marca.
+   Compartilhado pela CLI e pelo artifact: o texto gerado passa pelas mesmas
+   regras nos dois lugares, e a CLI ainda manda os erros de volta ao Claude.
+   ────────────────────────────────────────────────────────────────────────── */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.CarrosselLint = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  var OBRIGATORIOS = {
+    capa: ["titulo"],
+    faixa: ["faixa"],
+    texto: ["titulo", "corpo"],
+    imagem: ["titulo"],
+    lista: ["titulo", "itens"],
+    passos: ["titulo", "passos"],
+    metrica: ["valor"],
+    barras: ["titulo", "dados"],
+    tese: ["texto"],
+    cta: ["titulo", "acao"]
+  };
+
+  var EMOJI = /[\u203C-\u3299\u{1F000}-\u{1FAFF}\u{FE0F}]/u;
+
+  var PADROES = [
+    { re: /voc[êe] j[áa] (se perguntou|parou para pensar|reparou que)/i, regra: "abertura com pergunta retórica genérica", sev: "erro" },
+    { re: /n[ãa]o [ée] [^.,;!?]{3,40}, [ée] /i, regra: 'construção "não é X, é Y"', sev: "erro" },
+    { re: /\b(incr[íi]vel|poderos[oa]|revolucion[áa]ri[oa]|impression[ao]nte|simplesmente|indispens[áa]vel)\b/i, regra: "adjetivo de venda vazio", sev: "erro" },
+    { re: /\b(buscando|visando|objetivando|procurando)\s+\w+r\b/i, regra: "gerúndio de preenchimento", sev: "erro" },
+    { re: /\b(no fim das contas|ao final do dia|o que realmente importa [ée])\b/i, regra: "conclusão genérica", sev: "erro" },
+    { re: /\bo candidato\b/i, regra: "terceira pessoa (use 'você')", sev: "erro" },
+    { re: /\bn[óo]s (te|lhe) (ajudamos|ensinamos)\b/i, regra: "primeira pessoa do plural institucional", sev: "erro" },
+    { re: /\b(desvende|destrave|domine de uma vez|segredo que ningu[ée]m conta)\b/i, regra: "clichê de infoproduto", sev: "erro" },
+    { re: /\bcinza\b.*\bazul\b/i, regra: "menção a texto cinza sobre azul", sev: "aviso" }
+  ];
+
+  var CAMPOS_TEXTO = ["titulo", "corpo", "texto", "intro", "faixa", "gancho", "acao", "destaque", "label", "fonte", "credito", "unidade", "assinatura"];
+
+  function textosDoSlide(s) {
+    var out = [];
+    CAMPOS_TEXTO.forEach(function (c) { if (typeof s[c] === "string" && s[c]) out.push([c, s[c]]); });
+    (s.itens || []).forEach(function (i, n) { if (typeof i === "string") out.push(["itens[" + n + "]", i]); });
+    (s.passos || []).forEach(function (p, n) {
+      if (p && p.titulo) out.push(["passos[" + n + "].titulo", p.titulo]);
+      if (p && p.texto) out.push(["passos[" + n + "].texto", p.texto]);
+    });
+    (s.dados || []).forEach(function (d, n) { if (d && d.rotulo) out.push(["dados[" + n + "].rotulo", d.rotulo]); });
+    return out;
+  }
+
+  function palavras(s) {
+    return String(s || "").replace(/\*/g, "").trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  function validarSchema(c) {
+    var erros = [];
+    if (!c || typeof c !== "object") return [{ severidade: "erro", regra: "resposta não é um objeto JSON" }];
+    if (!Array.isArray(c.slides) || !c.slides.length) erros.push({ severidade: "erro", regra: "campo slides ausente ou vazio" });
+    (c.slides || []).forEach(function (s, i) {
+      var pos = i + 1;
+      if (!s || !s.tipo) { erros.push({ slide: pos, severidade: "erro", regra: "slide sem campo tipo" }); return; }
+      var req = OBRIGATORIOS[s.tipo];
+      if (!req) { erros.push({ slide: pos, severidade: "erro", regra: "tipo desconhecido: " + s.tipo }); return; }
+      req.forEach(function (campo) {
+        var v = s[campo];
+        var vazio = v == null || v === "" || (Array.isArray(v) && !v.length);
+        if (vazio) erros.push({ slide: pos, campo: campo, severidade: "erro", regra: "campo obrigatório ausente no tipo " + s.tipo });
+      });
+    });
+    if ((c.slides || [])[0] && c.slides[0].tipo !== "capa") erros.push({ slide: 1, severidade: "erro", regra: "o primeiro slide precisa ser a capa" });
+    var ult = (c.slides || [])[(c.slides || []).length - 1];
+    if (ult && ult.tipo !== "cta") erros.push({ slide: (c.slides || []).length, severidade: "erro", regra: "o último slide precisa ser o CTA" });
+    if (!c.legenda) erros.push({ severidade: "aviso", regra: "legenda ausente" });
+    if (!Array.isArray(c.hashtags) || c.hashtags.length < 4) erros.push({ severidade: "aviso", regra: "menos de 4 hashtags" });
+    return erros;
+  }
+
+  function lint(c, brand) {
+    var achados = validarSchema(c);
+    var b = brand || {};
+    var travessoesTotais = 0;
+
+    (c.slides || []).forEach(function (s, i) {
+      var pos = i + 1;
+      var marcas = 0;
+
+      textosDoSlide(s).forEach(function (par) {
+        var campo = par[0], txt = par[1];
+        if (EMOJI.test(txt)) achados.push({ slide: pos, campo: campo, severidade: "erro", regra: "emoji", trecho: txt.slice(0, 60) });
+        PADROES.forEach(function (p) {
+          if (p.re.test(txt)) achados.push({ slide: pos, campo: campo, severidade: p.sev, regra: p.regra, trecho: txt.slice(0, 80) });
+        });
+        if (/^[^a-z\u00e0-\u00fa]{8,}$/.test(txt.replace(/\*/g, "")) && campo !== "label" && campo !== "unidade") {
+          achados.push({ slide: pos, campo: campo, severidade: "erro", regra: "texto em caixa alta fora de label", trecho: txt.slice(0, 60) });
+        }
+        if (/^#{1,6}\s|^\s*[-•]\s/.test(txt)) achados.push({ slide: pos, campo: campo, severidade: "erro", regra: "markdown cru no texto", trecho: txt.slice(0, 60) });
+        marcas += (txt.match(/\*\*[^*]+\*\*/g) || []).length;
+        travessoesTotais += (txt.match(/—/g) || []).length;
+      });
+
+      if (marcas > 1) achados.push({ slide: pos, severidade: "aviso", regra: "mais de um destaque amarelo no mesmo slide (" + marcas + ")" });
+      if (s.tipo === "capa" && palavras(s.titulo) > 9) achados.push({ slide: pos, campo: "titulo", severidade: "aviso", regra: "título de capa com mais de 8 palavras" });
+      if (s.corpo && palavras(s.corpo) > 85) achados.push({ slide: pos, campo: "corpo", severidade: "aviso", regra: "slide com mais de 85 palavras (alvo: 40 a 70)" });
+      if (Array.isArray(s.itens) && s.itens.length === 3) achados.push({ slide: pos, severidade: "aviso", regra: "lista de exatamente três itens (vício de escrita gerada)" });
+      if (s.tipo === "cta") {
+        var chave = (c.meta || {}).palavraCta;
+        if (chave && s.acao && s.acao.toUpperCase().indexOf(String(chave).toUpperCase()) < 0) {
+          achados.push({ slide: pos, campo: "acao", severidade: "erro", regra: "o CTA não pede o comentário com a palavra " + chave });
+        }
+      }
+      if ((s.tipo === "capa" || s.tipo === "imagem") && !(s.imagem && (s.imagem.prompt || s.imagem.arquivo || s.imagem.url))) {
+        achados.push({ slide: pos, campo: "imagem", severidade: "aviso", regra: "slide de imagem sem prompt nem arquivo" });
+      }
+    });
+
+    if (travessoesTotais > 2) achados.push({ severidade: "aviso", regra: "travessão usado " + travessoesTotais + " vezes como pausa dramática" });
+
+    if (Array.isArray(c.hashtags)) {
+      c.hashtags.forEach(function (h) {
+        if (/[A-Z\u00c0-\u00da]/.test(h)) achados.push({ campo: "hashtags", severidade: "aviso", regra: "hashtag com maiúscula: " + h });
+      });
+      var raizes = {};
+      c.hashtags.forEach(function (h) {
+        var r = String(h).replace(/^#/, "").slice(0, 6).toLowerCase();
+        raizes[r] = (raizes[r] || 0) + 1;
+        if (raizes[r] === 2) achados.push({ campo: "hashtags", severidade: "aviso", regra: "hashtags com a mesma raiz: " + h });
+      });
+    }
+    if (c.legenda && EMOJI.test(c.legenda)) achados.push({ campo: "legenda", severidade: "erro", regra: "emoji na legenda" });
+
+    void b;
+    return achados;
+  }
+
+  function erros(achados) { return (achados || []).filter(function (a) { return a.severidade === "erro"; }); }
+
+  function formatar(achados) {
+    return (achados || []).map(function (a) {
+      return (a.severidade === "erro" ? "ERRO " : "aviso") +
+        " · " + (a.slide ? "slide " + a.slide : "carrossel") +
+        (a.campo ? " · " + a.campo : "") +
+        " · " + a.regra + (a.trecho ? ' · "' + a.trecho + '"' : "");
+    }).join("\n");
+  }
+
+  return { lint: lint, validarSchema: validarSchema, erros: erros, formatar: formatar, OBRIGATORIOS: OBRIGATORIOS };
+});
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var brand = {"marca":"No Controle","handle":"@profellyssonrocha","autor":"Éllysson Rocha — auditor de Tribunal de Contas, 15º no TCU e 3º na ANAC","publico":"candidatos a concursos da área de controle (TCU, TCE, TCM, CGU, CNU). Adultos, alta escolaridade, tempo escasso. Não é público de conteúdo motivacional.","tese":"Estudar muito não aprova. Estudar orientado por dados aprova: ciclo ponderado por peso da matéria (50%), extensão (25%) e dificuldade (25%).","formato":{"largura":1080,"altura":1350,"padding":72},"cores":{"escuro":"#0D2B5E","medio":"#1A4A9C","claro":"#F4F5F7","creme":"#FFF7E0","amarelo":"#F5C842","branco":"#FFFFFF","tintaClara":"#2A1F00"},"cabecalho":{"esquerda":"No Controle","centro":"@profellyssonrocha","direita":"Auditor TCU //"},"tipografia":{"familia":"Nunito","fallback":"system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif","escala":{"capa":92,"faixa":56,"titulo":46,"corpo":30,"bullet":28,"label":20,"rodape":16,"cabecalho":15}},"linhasEditoriais":{"metodo":{"nome":"Método","descricao":"Ensina uma parte da metodologia e contraria o senso comum do concurseiro.","exemplo":"Por que estudar 10h por dia te reprova"},"plataforma":{"nome":"Plataforma","descricao":"Mostra o ciclo adaptativo funcionando na prática, com números.","exemplo":"O ciclo que se ajusta sozinho quando você erra"},"autoridade":{"nome":"Autoridade","descricao":"Bastidor da aprovação e da rotina real, sem heroísmo.","exemplo":"Como eu organizava o ciclo antes de passar em 15º"},"prova-social":{"nome":"Prova social","descricao":"Progresso concreto de aluno: antes, depois, números.","exemplo":"3 meses de ciclo: o antes e o depois do edital"},"tcu":{"nome":"Decodificando o TCU","descricao":"Decisão publicada ou fiscalização de repercussão contada como notícia: contexto, decisão, números, ressalva e como a banca cobra. Somente informação pública, com fonte no slide, sem comentar processo em curso.","exemplo":"O que o acórdão sobre contratação direta muda na sua prova"},"edital":{"nome":"Decodificando o edital","descricao":"Edital ou banca lido como mercado: vagas, pesos, o que mudou, estratégia de estudo.","exemplo":"Os pesos do edital dizem por onde começar"}},"ctas":["Quero participar","Acessar material","Entrar na mentoria","Comente aqui embaixo","Vamos trocar experiências?"],"palavrasChaveCta":["CONTROLE","CICLO","EDITAL","TCU"],"voz":{"idioma":"português do Brasil","pessoa":"segunda pessoa (você). Nunca 'o candidato', nunca 'nós te ajudamos'.","tom":"professor falando com um aluno por vez. Próximo sem ser familiar demais, concreto, nunca motivacional vago. Reconhece tempo escasso, fadiga e pressão de prazo.","registro":["Você sabe o que é?","O problema não é estudar pouco.","A maioria erra aqui.","Faça assim:"],"casing":"títulos em sentence case; labels em UPPERCASE com tracking","tamanhoSlide":"40 a 70 palavras por slide, uma ideia por slide"},"proibicoes":["emoji em qualquer campo","abertura com pergunta retórica genérica (\"Você já se perguntou\")","construção \"não é X, é Y\"","listas de exatamente três elementos por hábito","adjetivos de venda vazios (incrível, poderoso, revolucionário, essencial, fundamental)","gerúndio de preenchimento (buscando, visando, objetivando)","conclusão genérica (\"no fim das contas, o que importa é\")","travessão como pausa dramática repetida","título em caixa alta","texto branco sobre amarelo","texto cinza sobre azul-escuro"],"imagem":{"estilo":"fotografia editorial documental, luz natural dura, paleta institucional dessaturada com azuis profundos, composição limpa com muito espaço negativo, profundidade de campo rasa, 35mm","negativo":"sem texto, sem letras, sem números, sem marca d'água, sem logotipo, sem colagem, sem ilustração, sem render 3d, sem rosto de pessoa pública real, sem bandeira, sem símbolo partidário","proporcaoCapa":"4:5","proporcaoInterna":"16:9","estiloEn":"editorial documentary photograph, hard natural light, desaturated institutional palette with deep navy tones, clean composition with generous negative space, shallow depth of field, 35mm, photographic grain-free finish","negativoEn":"no text, no letters, no numbers, no watermark, no logo, no collage, no illustration, no 3d render, no charts, no recognizable public figure, no flags, no political symbols"}};
+  var L = window.CarrosselLayout;
+  var P = window.CarrosselPrompt;
+  var V = window.CarrosselLint;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var estado = { carrossel: null, indice: 0, id: null, roteiro: null };
+  var caps = { sample: null, db: null, assets: null, downloads: null };
+  var controle = null;
+
+  // ── tema ────────────────────────────────────────────────────────────────
+  $("btnTema").onclick = function () {
+    var r = document.documentElement;
+    var escuro = r.getAttribute("data-theme") === "dark" ||
+      (!r.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    r.setAttribute("data-theme", escuro ? "light" : "dark");
+    try { localStorage.setItem("tema", escuro ? "light" : "dark"); } catch (e) { /* sem storage */ }
+  };
+  try { var t = localStorage.getItem("tema"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) { /* sem storage */ }
+
+  // ── abas ────────────────────────────────────────────────────────────────
+  function trocarAba(qual) {
+    var carrossel = qual === "carrossel";
+    $("abaCarrossel").setAttribute("aria-selected", String(carrossel));
+    $("abaReels").setAttribute("aria-selected", String(!carrossel));
+    $("painelCarrossel").hidden = !carrossel;
+    $("painelReels").hidden = carrossel;
+  }
+  $("abaCarrossel").onclick = function () { trocarAba("carrossel"); };
+  $("abaReels").onclick = function () { trocarAba("reels"); };
+
+  // ── formulário ──────────────────────────────────────────────────────────
+  (function preencherTipos() {
+    var sel = $("tipo");
+    Object.keys(brand.linhasEditoriais).forEach(function (k) {
+      var o = document.createElement("option");
+      o.value = k;
+      o.textContent = brand.linhasEditoriais[k].nome;
+      sel.appendChild(o);
+    });
+    sel.onchange = function () {
+      var l = brand.linhasEditoriais[sel.value] || {};
+      $("dicaTipo").textContent = l.descricao || "";
+    };
+    sel.onchange();
+  })();
+  $("nslides").oninput = function () { $("nslidesVal").textContent = this.value; };
+
+  // ── render do deck ──────────────────────────────────────────────────────
+
+  function urlDaImagem(ref) {
+    if (!ref) return null;
+    return ref.url || ref.dataUrl || null;
+  }
+
+  function opcoesLayout() {
+    return { handle: brand.handle, cabecalho: brand.cabecalho, imagem: urlDaImagem };
+  }
+
+  function encaixar(moldura) {
+    var slide = moldura.querySelector(".slide");
+    if (!slide) return;
+    var z = moldura.clientWidth / brand.formato.largura;
+    slide.style.transform = "scale(" + z + ")";
+    L.ajustar(slide);
+  }
+
+  function pintarMoldura(moldura, slide, indice, total) {
+    moldura.innerHTML = L.renderSlide(slide, Object.assign(opcoesLayout(), { indice: indice, total: total }));
+    encaixar(moldura);
+  }
+
+  function slidesComFundo() {
+    var slides = (estado.carrossel && estado.carrossel.slides) || [];
+    var fundos = L.planoDeFundos(slides);
+    return slides.map(function (s, i) { return Object.assign({}, s, { fundo: s.fundo || fundos[i] }); });
+  }
+
+  function pintarTira() {
+    var tira = $("tira");
+    tira.innerHTML = "";
+    var lista = slidesComFundo();
+    lista.forEach(function (s, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "thumb";
+      b.setAttribute("aria-current", String(i === estado.indice));
+      b.setAttribute("aria-label", "Slide " + (i + 1) + ", " + s.tipo);
+      var m = document.createElement("div");
+      m.className = "moldura";
+      b.appendChild(m);
+      var n = document.createElement("span");
+      n.className = "n";
+      n.textContent = i + 1;
+      b.appendChild(n);
+      b.onclick = function () { estado.indice = i; pintarTudo(); };
+      tira.appendChild(b);
+      pintarMoldura(m, s, i + 1, lista.length);
+    });
+  }
+
+  var ROTULOS = {
+    titulo: "Título", corpo: "Texto de apoio", texto: "Frase", intro: "Abertura", faixa: "Faixa amarela",
+    gancho: "Pergunta-gancho", acao: "Chamada final", destaque: "Segunda linha (caixa amarela)",
+    label: "Etiqueta", fonte: "Fonte", credito: "Crédito da imagem", valor: "Número",
+    unidade: "Unidade", itens: "Bullets (um por linha)", assinatura: "Assinatura"
+  };
+
+  function campoTexto(chave, valor, aoMudar, alto) {
+    var wrap = document.createElement("div");
+    wrap.className = "campo";
+    var id = "campo-" + chave;
+    var lab = document.createElement("label");
+    lab.setAttribute("for", id);
+    lab.textContent = ROTULOS[chave] || chave;
+    var ta = document.createElement("textarea");
+    ta.id = id;
+    ta.value = valor == null ? "" : valor;
+    ta.rows = alto || 2;
+    ta.oninput = function () { aoMudar(ta.value); };
+    wrap.appendChild(lab);
+    wrap.appendChild(ta);
+    return wrap;
+  }
+
+  function pintarEditor() {
+    var ed = $("editor");
+    ed.innerHTML = "";
+    var s = (estado.carrossel.slides || [])[estado.indice];
+    if (!s) return;
+
+    var topo = document.createElement("div");
+    topo.className = "editor-topo";
+    topo.innerHTML = '<span class="tipo-slide">Slide ' + (estado.indice + 1) + " · " + L.esc(s.tipo) + "</span>";
+    var acoes = document.createElement("div");
+    acoes.className = "linha";
+    acoes.style.flex = "0 0 auto";
+    var bRe = document.createElement("button");
+    bRe.type = "button";
+    bRe.className = "btn fantasma pequeno";
+    bRe.textContent = "Regerar este slide";
+    bRe.onclick = regerarSlide;
+    bRe.disabled = !caps.sample;
+    acoes.appendChild(bRe);
+    topo.appendChild(acoes);
+    ed.appendChild(topo);
+
+    var dica = document.createElement("p");
+    dica.className = "dica";
+    dica.style.marginTop = "0";
+    dica.textContent = "**palavra** põe o retângulo amarelo atrás dela. *palavra* deixa em negrito.";
+    ed.appendChild(dica);
+
+    ["label", "titulo", "gancho", "intro", "faixa", "texto", "corpo", "destaque", "acao", "valor", "unidade", "credito", "fonte", "assinatura"].forEach(function (chave) {
+      if (typeof s[chave] !== "string") return;
+      ed.appendChild(campoTexto(chave, s[chave], function (v) {
+        s[chave] = v;
+        atualizarPalco();
+      }, chave === "corpo" || chave === "intro" || chave === "texto" ? 4 : 2));
+    });
+
+    if (Array.isArray(s.itens)) {
+      ed.appendChild(campoTexto("itens", s.itens.join("\n"), function (v) {
+        s.itens = v.split("\n").filter(function (x) { return x.trim(); });
+        atualizarPalco();
+      }, 4));
+    }
+
+    ["passos", "dados"].forEach(function (chave) {
+      if (!Array.isArray(s[chave])) return;
+      ed.appendChild(campoTexto(chave, JSON.stringify(s[chave], null, 1), function (v) {
+        try { s[chave] = JSON.parse(v); atualizarPalco(); } catch (e) { /* enquanto digita */ }
+      }, 6));
+    });
+
+    if (s.tipo === "capa" || s.tipo === "imagem" || s.tipo === "cta") ed.appendChild(blocoImagem(s));
+  }
+
+  function blocoImagem(s) {
+    var box = document.createElement("div");
+    box.className = "campo";
+    var lab = document.createElement("label");
+    lab.textContent = "Imagem";
+    box.appendChild(lab);
+
+    if (s.imagem && s.imagem.prompt) {
+      var pr = document.createElement("div");
+      pr.className = "prompt-img";
+      pr.textContent = s.imagem.prompt;
+      box.appendChild(pr);
+      var copiar = document.createElement("button");
+      copiar.type = "button";
+      copiar.className = "btn fantasma pequeno";
+      copiar.textContent = "Copiar prompt da imagem";
+      copiar.onclick = function () {
+        navigator.clipboard.writeText(s.imagem.prompt).then(function () {
+          copiar.textContent = "Prompt copiado";
+          setTimeout(function () { copiar.textContent = "Copiar prompt da imagem"; }, 1800);
+        });
+      };
+      box.appendChild(copiar);
+    }
+
+    var entrada = document.createElement("input");
+    entrada.type = "file";
+    entrada.accept = "image/png,image/jpeg,image/webp";
+    entrada.style.marginTop = "8px";
+    entrada.onchange = async function () {
+      var f = entrada.files && entrada.files[0];
+      if (!f) return;
+      s.imagem = s.imagem || {};
+      if (caps.assets) {
+        try {
+          var r = await caps.assets.upload(f);
+          s.imagem.url = r.url;
+          s.imagem.assetId = r.id;
+          atualizarPalco();
+          salvar();
+          return;
+        } catch (e) { /* cai para o dataURL */ }
+      }
+      var leitor = new FileReader();
+      leitor.onload = function () { s.imagem.dataUrl = String(leitor.result); atualizarPalco(); };
+      leitor.readAsDataURL(f);
+    };
+    box.appendChild(entrada);
+
+    var nota = document.createElement("span");
+    nota.className = "dica";
+    nota.textContent = "A página não chama a Kie direto (o sandbox bloqueia rede). Gere pelo `carrossel imagens` ou pelo app da Kie e suba o arquivo aqui.";
+    box.appendChild(nota);
+    return box;
+  }
+
+  function atualizarPalco() {
+    var lista = slidesComFundo();
+    var s = lista[estado.indice];
+    if (!s) return;
+    pintarMoldura($("molduraPalco"), s, estado.indice + 1, lista.length);
+    var thumb = $("tira").children[estado.indice];
+    if (thumb) pintarMoldura(thumb.querySelector(".moldura"), s, estado.indice + 1, lista.length);
+  }
+
+  function pintarLegenda() {
+    $("legendaTxt").textContent = estado.carrossel.legenda || "";
+    $("hashtagsTxt").textContent = (estado.carrossel.hashtags || []).join(" ");
+  }
+
+  function pintarTudo() {
+    if (!estado.carrossel) return;
+    $("cartaoDeck").hidden = false;
+    $("cartaoExport").hidden = false;
+    $("tituloDeck").textContent = "2 · Revisar · " + (estado.carrossel.slides || []).length + " slides";
+    pintarTira();
+    atualizarPalco();
+    pintarEditor();
+    pintarLegenda();
+  }
+
+  function irParaODeck() {
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      $("cartaoDeck").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  window.addEventListener("resize", function () {
+    document.querySelectorAll(".moldura").forEach(encaixar);
+  });
+
+  // ── geração ─────────────────────────────────────────────────────────────
+
+  function mostrarEstado(el, texto, classe) {
+    el.hidden = !texto;
+    el.textContent = texto || "";
+    el.className = "aviso" + (classe ? " " + classe : "");
+  }
+
+  var COPIA_ERRO = {
+    not_granted: "Você não liberou o Claude para esta página. Dá para seguir colando o JSON no modo diagramador.",
+    sampling_disabled: "Esta conta não tem geração pelo Claude disponível aqui.",
+    rate_limited: "Muitas gerações seguidas. Espere um minuto e tente de novo.",
+    session_expired: "Sua sessão expirou. Entre de novo no claude.ai e recarregue.",
+    invalid_json: "O texto voltou fora do formato. Tente de novo, com o tema mais específico.",
+    refused: "O Claude não escreveu sobre isso. Reformule o tema.",
+    prompt_too_large: "Contexto grande demais. Corte o material de apoio.",
+    empty_completion: "Não veio texto. Tente um tema mais específico.",
+    cancelled: ""
+  };
+
+  function copiaDoErro(e) {
+    return COPIA_ERRO[e && e.code] !== undefined ? COPIA_ERRO[e.code] : "Falhou por aqui: " + ((e && e.message) || "erro desconhecido");
+  }
+
+  async function gerar() {
+    if (!caps.sample) return;
+    var tema = $("tema").value.trim();
+    if (!tema) { mostrarEstado($("estadoGeracao"), "Escreva o tema primeiro.", "alerta"); return; }
+
+    controle = new AbortController();
+    $("btnGerar").disabled = true;
+    $("btnParar").hidden = false;
+    mostrarEstado($("estadoGeracao"), "Escrevendo… o Claude pensa antes de começar, costuma levar de 20 a 60 segundos.", "");
+    $("fluxo").hidden = false;
+    $("fluxo").textContent = "";
+
+    var opcoes = {
+      tema: tema,
+      tipo: $("tipo").value,
+      nSlides: Number($("nslides").value),
+      palavraCta: ($("cta").value || "CONTROLE").toUpperCase(),
+      contexto: $("contexto").value.trim() || null
+    };
+
+    try {
+      var c = await caps.sample.json(P.carrossel(brand, opcoes), {
+        signal: controle.signal,
+        cache: false,
+        modelTier: "default",
+        onText: function (u) {
+          var el = $("fluxo");
+          el.textContent = u.text.slice(-1400);
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+      c.meta = Object.assign({ tema: opcoes.tema, tipo: opcoes.tipo, palavraCta: opcoes.palavraCta }, c.meta || {});
+      estado.carrossel = c;
+      estado.indice = 0;
+      estado.id = null;
+      pintarTudo();
+      irParaODeck();
+      rodarLint(true);
+      mostrarEstado($("estadoGeracao"), "Carrossel escrito. Revise slide a slide antes de exportar.", "ok");
+      $("fluxo").hidden = true;
+      await salvar();
+    } catch (e) {
+      mostrarEstado($("estadoGeracao"), copiaDoErro(e), e && e.code === "cancelled" ? "" : "erro");
+      if (e && e.code === "cancelled") mostrarEstado($("estadoGeracao"), "Geração interrompida.", "alerta");
+    } finally {
+      $("btnGerar").disabled = false;
+      $("btnParar").hidden = true;
+      controle = null;
+    }
+  }
+
+  async function regerarSlide() {
+    if (!caps.sample || !estado.carrossel) return;
+    var i = estado.indice;
+    var alvo = $("estadoGeracao");
+    mostrarEstado(alvo, "Reescrevendo o slide " + (i + 1) + "…", "");
+    try {
+      var novo = await caps.sample.json(P.slide(brand, estado.carrossel, i, null), { cache: false, modelTier: "default" });
+      if (!novo.tipo) novo.tipo = estado.carrossel.slides[i].tipo;
+      if (estado.carrossel.slides[i].imagem && !novo.imagem) novo.imagem = estado.carrossel.slides[i].imagem;
+      if (novo.imagem && estado.carrossel.slides[i].imagem) {
+        novo.imagem.url = novo.imagem.url || estado.carrossel.slides[i].imagem.url;
+        novo.imagem.dataUrl = novo.imagem.dataUrl || estado.carrossel.slides[i].imagem.dataUrl;
+      }
+      estado.carrossel.slides[i] = novo;
+      pintarTudo();
+      mostrarEstado(alvo, "Slide " + (i + 1) + " reescrito.", "ok");
+      await salvar();
+    } catch (e) {
+      mostrarEstado(alvo, copiaDoErro(e), "erro");
+    }
+  }
+
+  function rodarLint(silencioSeLimpo) {
+    if (!estado.carrossel) return;
+    var achados = V.lint(estado.carrossel, brand);
+    var el = $("lintSaida");
+    if (!achados.length) {
+      if (silencioSeLimpo) { el.hidden = true; return; }
+      mostrarEstado(el, "Nada a apontar: o texto está dentro das regras da marca.", "ok");
+      return;
+    }
+    var erros = V.erros(achados);
+    mostrarEstado(el, V.formatar(achados), erros.length ? "erro" : "alerta");
+  }
+
+  $("btnGerar").onclick = gerar;
+  $("btnParar").onclick = function () { if (controle) controle.abort(); };
+  $("btnLint").onclick = function () { rodarLint(false); };
+
+  $("btnColar").onclick = function () {
+    try {
+      var c = JSON.parse($("colarJson").value);
+      if (!c.slides || !c.slides.length) throw new Error("sem slides");
+      estado.carrossel = c;
+      estado.indice = 0;
+      estado.id = null;
+      pintarTudo();
+      irParaODeck();
+      rodarLint(false);
+      mostrarEstado($("estadoGeracao"), "Carrossel carregado do JSON.", "ok");
+    } catch (e) {
+      mostrarEstado($("estadoGeracao"), "Esse texto não é um carrossel em JSON válido.", "erro");
+    }
+  };
+
+  $("legendaTxt").addEventListener("input", function () {
+    if (estado.carrossel) estado.carrossel.legenda = $("legendaTxt").textContent;
+  });
+
+  // ── histórico (db) ──────────────────────────────────────────────────────
+
+  async function salvar() {
+    if (!caps.db || !estado.carrossel) return;
+    var corpo = {
+      tema: (estado.carrossel.meta || {}).tema || "sem tema",
+      tipo: (estado.carrossel.meta || {}).tipo || "",
+      atualizadoEm: Date.now(),
+      carrossel: estado.carrossel
+    };
+    try {
+      if (estado.id) await caps.db.doc("carrosseis/" + estado.id).set(corpo);
+      else {
+        var ref = await caps.db.collection("carrosseis").add(corpo);
+        estado.id = ref.id;
+      }
+    } catch (e) { /* histórico é conveniência, não bloqueia */ }
+  }
+
+  function pintarHistorico(docs) {
+    var ul = $("historico");
+    ul.innerHTML = "";
+    $("semHistorico").hidden = docs.length > 0;
+    docs.forEach(function (d) {
+      var dados = d.data() || {};
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      var quando = new Date(Number(dados.atualizadoEm) || Date.now());
+      b.innerHTML = "<strong></strong><span class='quando'></span>";
+      b.querySelector("strong").textContent = String(dados.tema || "sem tema");
+      b.querySelector(".quando").textContent =
+        quando.toLocaleDateString("pt-BR") + " · " + ((dados.carrossel && dados.carrossel.slides) || []).length + " slides";
+      b.onclick = function () {
+        estado.carrossel = dados.carrossel;
+        estado.indice = 0;
+        estado.id = d.id;
+        pintarTudo();
+        rodarLint(true);
+      };
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
+  // ── exportação ──────────────────────────────────────────────────────────
+
+  async function pngDoSlide(slide, indice, total) {
+    var palco = $("exportacao");
+    palco.innerHTML = L.renderSlide(slide, Object.assign(opcoesLayout(), { indice: indice, total: total }));
+    var el = palco.querySelector(".slide");
+    L.ajustar(el);
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    var canvas = await html2canvas(el, {
+      width: brand.formato.largura,
+      height: brand.formato.altura,
+      scale: 1,
+      backgroundColor: null,
+      logging: false,
+      useCORS: true
+    });
+    return await new Promise(function (r) { canvas.toBlob(r, "image/png"); });
+  }
+
+  async function exportar(tudo) {
+    if (!estado.carrossel) return;
+    var alvo = $("estadoExport");
+    if (!caps.downloads) {
+      mostrarEstado(alvo, "Esta visualização não deixa a página entregar arquivos. Abra o artifact pelo claude.ai para exportar.", "alerta");
+      return;
+    }
+    var lista = slidesComFundo();
+    var base = (((estado.carrossel.meta || {}).tema) || "carrossel").normalize("NFD").replace(/[^\x00-\x7F]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "carrossel";
+    try {
+      if (!tudo) {
+        mostrarEstado(alvo, "Montando o PNG…", "");
+        var b = await pngDoSlide(lista[estado.indice], estado.indice + 1, lista.length);
+        await caps.downloads.save({ filename: base + "-" + String(estado.indice + 1).padStart(2, "0") + ".png", data: b });
+        mostrarEstado(alvo, "Slide salvo.", "ok");
+        return;
+      }
+      var zip = new JSZip();
+      for (var i = 0; i < lista.length; i++) {
+        mostrarEstado(alvo, "Montando o slide " + (i + 1) + " de " + lista.length + "…", "");
+        var blob = await pngDoSlide(lista[i], i + 1, lista.length);
+        zip.file(String(i + 1).padStart(2, "0") + ".png", blob);
+      }
+      zip.file("legenda.txt", (estado.carrossel.legenda || "") + "\n\n" + (estado.carrossel.hashtags || []).join(" ") + "\n");
+      zip.file("carrossel.json", JSON.stringify(estado.carrossel, null, 2));
+      mostrarEstado(alvo, "Fechando o arquivo…", "");
+      var saida = await zip.generateAsync({ type: "blob" });
+      await caps.downloads.save({ filename: base + ".zip", data: saida });
+      mostrarEstado(alvo, "Carrossel salvo em .zip, na ordem de publicação.", "ok");
+    } catch (e) {
+      if (e && e.code === "declined") mostrarEstado(alvo, "Download recusado.", "alerta");
+      else if (e && e.code === "too_large") mostrarEstado(alvo, "Arquivo grande demais. Baixe slide a slide.", "alerta");
+      else mostrarEstado(alvo, "Não deu para exportar: " + ((e && e.message) || e), "erro");
+    }
+  }
+
+  $("btnZip").onclick = function () { exportar(true); };
+  $("btnPng").onclick = function () { exportar(false); };
+  $("btnCopiarLegenda").onclick = function () {
+    var txt = (estado.carrossel.legenda || "") + "\n\n" + (estado.carrossel.hashtags || []).join(" ");
+    navigator.clipboard.writeText(txt).then(function () {
+      mostrarEstado($("estadoExport"), "Legenda copiada.", "ok");
+    });
+  };
+
+  // ── reels ───────────────────────────────────────────────────────────────
+
+  var controleRoteiro = null;
+
+  async function escreverRoteiro() {
+    if (!caps.sample) return;
+    var tema = $("temaReels").value.trim();
+    if (!tema) { mostrarEstado($("estadoRoteiro"), "Escreva o assunto do vídeo.", "alerta"); return; }
+    controleRoteiro = new AbortController();
+    $("btnRoteiro").disabled = true;
+    $("btnPararRoteiro").hidden = false;
+    mostrarEstado($("estadoRoteiro"), "Escrevendo o roteiro…", "");
+    try {
+      var r = await caps.sample.json(P.roteiro(brand, { tema: tema }), {
+        signal: controleRoteiro.signal, cache: false, modelTier: "default"
+      });
+      estado.roteiro = r;
+      pintarRoteiro();
+      mostrarEstado($("estadoRoteiro"), "Roteiro pronto: cerca de " + (r.duracaoEstimadaSegundos || "?") + " segundos.", "ok");
+    } catch (e) {
+      mostrarEstado($("estadoRoteiro"), copiaDoErro(e), e && e.code === "cancelled" ? "alerta" : "erro");
+    } finally {
+      $("btnRoteiro").disabled = false;
+      $("btnPararRoteiro").hidden = true;
+      controleRoteiro = null;
+    }
+  }
+
+  function textoDoRoteiro() {
+    var r = estado.roteiro || {};
+    return [
+      "GANCHO (0:00–0:03)", r.gancho || "", "",
+      (r.blocos || []).map(function (b) { return (b.tempo || "") + "\n" + b.texto; }).join("\n\n"), "",
+      "CTA", r.cta || "", "",
+      "LEGENDA", r.legenda || "", "", (r.hashtags || []).join(" ")
+    ].join("\n");
+  }
+
+  function pintarRoteiro() {
+    var r = estado.roteiro;
+    if (!r) return;
+    $("cartaoRoteiro").hidden = false;
+    var saida = $("roteiroSaida");
+    saida.innerHTML = "";
+    var g = document.createElement("p");
+    g.innerHTML = '<span class="tipo-slide">Gancho · 3 s</span><br>';
+    var gs = document.createElement("strong");
+    gs.style.fontSize = "20px";
+    gs.textContent = r.gancho || "";
+    g.appendChild(gs);
+    saida.appendChild(g);
+    (r.blocos || []).forEach(function (b) {
+      var p = document.createElement("p");
+      var t = document.createElement("span");
+      t.className = "tipo-slide";
+      t.textContent = b.tempo || "";
+      p.appendChild(t);
+      p.appendChild(document.createElement("br"));
+      p.appendChild(document.createTextNode(b.texto || ""));
+      saida.appendChild(p);
+    });
+    var cta = document.createElement("p");
+    cta.innerHTML = '<span class="tipo-slide">CTA falado</span><br>';
+    cta.appendChild(document.createTextNode(r.cta || ""));
+    saida.appendChild(cta);
+  }
+
+  $("btnRoteiro").onclick = escreverRoteiro;
+  $("btnPararRoteiro").onclick = function () { if (controleRoteiro) controleRoteiro.abort(); };
+  $("btnBaixarRoteiro").onclick = async function () {
+    if (!caps.downloads) { mostrarEstado($("estadoRoteiro"), "Exportação indisponível nesta visualização.", "alerta"); return; }
+    try {
+      await caps.downloads.save({ filename: "roteiro.txt", data: textoDoRoteiro() });
+    } catch (e) {
+      if (e && e.code !== "declined") mostrarEstado($("estadoRoteiro"), "Não deu para salvar o roteiro.", "erro");
+    }
+  };
+
+  // ── teleprompter ────────────────────────────────────────────────────────
+
+  var tp = { rodando: false, pos: 0, ultimo: 0 };
+
+  function passoTp(agora) {
+    if (!tp.rodando) return;
+    var dt = (agora - tp.ultimo) / 1000;
+    tp.ultimo = agora;
+    tp.pos += dt * Number($("tpVel").value);
+    $("tpTexto").style.transform = "translateY(" + -tp.pos + "px)";
+    requestAnimationFrame(passoTp);
+  }
+
+  $("btnTeleprompter").onclick = function () {
+    var r = estado.roteiro || {};
+    var alvo = $("tpTexto");
+    alvo.innerHTML = "";
+    [r.gancho].concat((r.blocos || []).map(function (b) { return b.texto; })).concat([r.cta])
+      .filter(Boolean).forEach(function (t) {
+        var p = document.createElement("p");
+        p.textContent = t;
+        alvo.appendChild(p);
+      });
+    tp.pos = 0;
+    tp.rodando = false;
+    alvo.style.transform = "translateY(0)";
+    $("tpPlay").textContent = "Iniciar";
+    $("teleprompter").hidden = false;
+  };
+  $("tpPlay").onclick = function () {
+    tp.rodando = !tp.rodando;
+    $("tpPlay").textContent = tp.rodando ? "Pausar" : "Continuar";
+    if (tp.rodando) { tp.ultimo = performance.now(); requestAnimationFrame(passoTp); }
+  };
+  $("tpFechar").onclick = function () { tp.rodando = false; $("teleprompter").hidden = true; };
+
+  // ── capacidades ─────────────────────────────────────────────────────────
+
+  function marcarChip(ligado) {
+    var chip = $("chipIA");
+    chip.className = "chip " + (ligado ? "ligado" : "manual");
+    chip.innerHTML = '<span class="ponto"></span>' + (ligado ? " Claude escreve aqui" : " Modo diagramador");
+  }
+
+  (async function iniciar() {
+    if (!window.claude || !window.claude.use) { marcarChip(false); $("btnGerar").disabled = true; return; }
+    caps.sample = await window.claude.use("sample").catch(function () { return null; });
+    caps.db = await window.claude.use("db").catch(function () { return null; });
+    caps.assets = await window.claude.use("assets").catch(function () { return null; });
+    caps.downloads = await window.claude.use("downloads").catch(function () { return null; });
+
+    marcarChip(!!caps.sample);
+    $("btnGerar").disabled = !caps.sample;
+    $("btnRoteiro").disabled = !caps.sample;
+    if (!caps.sample) {
+      mostrarEstado($("estadoGeracao"), "A geração pelo Claude não está disponível nesta visualização. A página segue funcionando como diagramador: cole o JSON logo abaixo.", "alerta");
+    }
+    if (caps.db) {
+      try {
+        caps.db.collection("carrosseis").orderBy("atualizadoEm", "desc").limit(20).onSnapshot(function (snap) {
+          pintarHistorico(snap.docs);
+        });
+      } catch (e) { /* sem histórico */ }
+    }
+  })();
+})();
+</script>

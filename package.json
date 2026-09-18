@@ -1,0 +1,22 @@
+{
+  "name": "carrossel-no-controle",
+  "version": "1.0.0",
+  "description": "Pipeline automatizado de carrosséis e roteiros do @profellyssonrocha: copy pelo Claude, imagens pela Kie/Gemini, PNG 1080x1350 pelo Playwright.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "carrossel": "./bin/carrossel.js"
+  },
+  "scripts": {
+    "carrossel": "node bin/carrossel.js",
+    "build:artifact": "node scripts/build-artifact.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@fontsource/nunito": "^5.1.0",
+    "playwright": "^1.49.0"
+  }
+}
