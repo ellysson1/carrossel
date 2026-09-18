@@ -4,7 +4,7 @@
    e auto-ajuste tipográfico rodado. */
 import fs from "node:fs";
 import path from "node:path";
-import { RAIZ, brand, layout, CSS_SLIDES, garantirPasta, cores } from "./nucleo.js";
+import { RAIZ, brand, layout, CSS_SLIDES, garantirPasta, cores, logoDataUrl } from "./nucleo.js";
 
 const PESOS = [400, 500, 700, 800, 900];
 
@@ -39,6 +39,8 @@ export function montarHTML(carrossel, opcoes = {}) {
   const deck = layout.renderDeck(carrossel, {
     handle: brand.handle,
     cabecalho: brand.cabecalho,
+    logo: logoDataUrl(),
+    seloTexto: (brand.selo && brand.selo.texto) || "NC",
     imagem: (ref) => {
       if (!ref) return null;
       if (ref.dataUrl) return ref.dataUrl;

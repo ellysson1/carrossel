@@ -357,3 +357,15 @@
   border-radius: 6px;
 }
 .slide .metrica .unidade { color: var(--tinta); }
+
+/* ── marca no selo da capa ────────────────────────────────────────────────── */
+/* Aceita logo redondo ou deitado: `contain` nunca corta a marca. O rodapé
+   segue sem logo — quem ancora a peça é o handle. */
+.slide .selo-logo {
+  height: 76px;
+  width: 260px;
+  max-width: 46%;
+  background-size: contain;
+  background-position: left center;
+  background-repeat: no-repeat;
+}

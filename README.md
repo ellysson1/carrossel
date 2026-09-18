@@ -231,6 +231,21 @@ arquivo no slide. Em lote, quem gera é a CLI.
 Sem a capability de geração, a página continua servindo como diagramador puro: cole o
 `carrossel.json` e exporte.
 
+## A sua marca na capa
+
+Deixe o arquivo do logo na raiz do projeto com o nome **`Logo.png`** (ou `logo.png`,
+`.jpg`, `.svg`). Ao subir, o app move para `brand/logo.png` sozinho e passa a desenhar
+a marca no **selo da capa**, ao lado do handle — no lugar do círculo com "NC".
+
+O logo entra por `contain`, então marca redonda e marca deitada aparecem inteiras, sem
+corte. Arquivo acima de 2 MB é ignorado, com aviso: salve uma versão menor.
+
+O rodapé continua **sem logo**, como manda o design system: quem ancora a peça é o
+handle `@profellyssonrocha`.
+
+Para tirar, apague `brand/logo.png` — volta o selo de texto, configurável em
+`brand.selo.texto`.
+
 ## Estrutura dos slides
 
 `capa · faixa · texto · imagem · lista · passos · metrica · barras · tese · cta`

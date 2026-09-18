@@ -90,7 +90,9 @@
       var capa = ctx.imagem(s.imagem);
       var selo = s.selo && s.selo.foto
         ? foto(ctx.imagem({ arquivo: s.selo.foto }), "selo-foto")
-        : '<div class="selo-marca">NC</div>';
+        : ctx.logo
+          ? foto(ctx.logo, "selo-logo")
+          : '<div class="selo-marca">' + esc(ctx.seloTexto || "NC") + "</div>";
       return (
         foto(capa, "capa-img") +
         '<div class="capa-veu"></div>' +
@@ -248,6 +250,8 @@
     var o = opcoes || {};
     var ctx = {
       handle: o.handle || "@profellyssonrocha",
+      logo: o.logo || null,
+      seloTexto: o.seloTexto || "NC",
       imagem: o.imagem || function () { return null; }
     };
     var tipo = TIPOS.indexOf(slide.tipo) >= 0 ? slide.tipo : "texto";

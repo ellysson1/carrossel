@@ -409,6 +409,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   "use strict";
 
   var brand = /*INJETAR:BRAND*/ {};
+  var logoDaMarca = /*INJETAR:LOGO*/ null;
   var L = window.CarrosselLayout;
   var P = window.CarrosselPrompt;
   var V = window.CarrosselLint;
@@ -510,7 +511,13 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   }
 
   function opcoesLayout() {
-    return { handle: brand.handle, cabecalho: brand.cabecalho, imagem: urlDaImagem };
+    return {
+      handle: brand.handle,
+      cabecalho: brand.cabecalho,
+      logo: logoDaMarca,
+      seloTexto: (brand.selo && brand.selo.texto) || "NC",
+      imagem: urlDaImagem
+    };
   }
 
   function encaixar(moldura) {

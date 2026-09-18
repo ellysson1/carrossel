@@ -115,5 +115,10 @@
     "proporcaoInterna": "16:9",
     "estiloEn": "editorial documentary photograph, hard natural light, desaturated institutional palette with deep navy tones, clean composition with generous negative space, shallow depth of field, 35mm, photographic grain-free finish",
     "negativoEn": "no text, no letters, no numbers, no watermark, no logo, no collage, no illustration, no 3d render, no charts, no recognizable public figure, no flags, no political symbols"
+  },
+  "selo": {
+    "arquivo": "brand/logo.png",
+    "texto": "NC",
+    "nota": "A marca aparece no selo da capa. O rodapé continua sem logo: quem ancora é o handle."
   }
 }

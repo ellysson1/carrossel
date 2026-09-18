@@ -17,6 +17,17 @@ export const brand = JSON.parse(fs.readFileSync(path.join(RAIZ, "brand", "brand.
 
 export const CSS_SLIDES = fs.readFileSync(path.join(RAIZ, "src", "layout", "slides.css"), "utf8");
 
+/** A marca do selo da capa, em data URL. Null quando não há logo no projeto. */
+export function logoDataUrl() {
+  const rel = (brand.selo && brand.selo.arquivo) || "brand/logo.png";
+  const arq = path.join(RAIZ, rel);
+  if (!fs.existsSync(arq)) return null;
+  const tipo = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                 ".webp": "image/webp", ".svg": "image/svg+xml" }[path.extname(arq).toLowerCase()];
+  if (!tipo) return null;
+  return `data:${tipo};base64,${fs.readFileSync(arq).toString("base64")}`;
+}
+
 /** Lê .env sem dependência externa. Variáveis já definidas no ambiente vencem. */
 export function carregarEnv(arquivo = path.join(RAIZ, ".env")) {
   if (!fs.existsSync(arquivo)) return process.env;

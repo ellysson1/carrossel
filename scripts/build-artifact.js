@@ -12,14 +12,42 @@ const ler = (...p) => fs.readFileSync(path.join(RAIZ, ...p), "utf8");
 const fonte = ler("artifact", "app.html");
 const brand = JSON.parse(ler("brand", "brand.json"));
 
+/* Logo largado na raiz do projeto (Logo.png) entra no lugar certo sozinho:
+   o selo da capa. Ninguém precisa saber onde o arquivo deveria morar. */
+const destinoLogo = path.join(RAIZ, (brand.selo && brand.selo.arquivo) || "brand/logo.png");
+if (!fs.existsSync(destinoLogo)) {
+  const solto = ["Logo.png", "logo.png", "Logo.jpg", "logo.jpg", "Logo.svg", "logo.svg"]
+    .map((n) => path.join(RAIZ, n))
+    .find((p) => fs.existsSync(p));
+  if (solto) {
+    fs.mkdirSync(path.dirname(destinoLogo), { recursive: true });
+    fs.copyFileSync(solto, destinoLogo);
+    console.log(`logo: ${path.basename(solto)} → ${path.relative(RAIZ, destinoLogo)}`);
+  }
+}
+
+function logoEmDataUrl() {
+  if (!fs.existsSync(destinoLogo)) return "null";
+  const tipo = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                 ".webp": "image/webp", ".svg": "image/svg+xml" }[path.extname(destinoLogo).toLowerCase()];
+  if (!tipo) return "null";
+  const bytes = fs.readFileSync(destinoLogo);
+  if (bytes.length > 2 * 1024 * 1024) {
+    console.log("logo: arquivo acima de 2 MB, mantendo o selo de texto. Salve uma versão menor.");
+    return "null";
+  }
+  return JSON.stringify(`data:${tipo};base64,${bytes.toString("base64")}`);
+}
+
 const html = fonte
   .replace("<!--INJETAR:CSS-SLIDES-->", `<style>\n${ler("src", "layout", "slides.css")}</style>`)
   .replace("<!--INJETAR:ENGINE-->", `<script>\n${ler("src", "layout", "engine.cjs")}</script>`)
   .replace("<!--INJETAR:PROMPT-->", `<script>\n${ler("src", "copy", "prompt.cjs")}</script>`)
   .replace("<!--INJETAR:LINT-->", `<script>\n${ler("src", "copy", "lint.cjs")}</script>`)
-  .replace("/*INJETAR:BRAND*/ {}", JSON.stringify(brand));
+  .replace("/*INJETAR:BRAND*/ {}", JSON.stringify(brand))
+  .replace("/*INJETAR:LOGO*/ null", logoEmDataUrl());
 
-for (const marca of ["INJETAR:CSS-SLIDES", "INJETAR:ENGINE", "INJETAR:PROMPT", "INJETAR:LINT", "INJETAR:BRAND"]) {
+for (const marca of ["INJETAR:CSS-SLIDES", "INJETAR:ENGINE", "INJETAR:PROMPT", "INJETAR:LINT", "INJETAR:BRAND", "INJETAR:LOGO"]) {
   if (html.includes(marca)) throw new Error(`marcador não substituído: ${marca}`);
 }
 if (html.includes("</script>", html.indexOf("var brand =")) === false) throw new Error("estrutura inesperada");
