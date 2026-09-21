@@ -240,6 +240,20 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
   color: var(--tinta); width: 100%; resize: vertical; min-height: 76px;
 }
 .bloco-imagem { border-top: 1px solid var(--borda); padding-top: 14px; margin-top: 4px; }
+
+/* resultados da busca em banco público */
+.grade-imagens { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.grade-imagens figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.grade-imagens button.escolher {
+  appearance: none; padding: 0; border: 2px solid var(--borda); border-radius: 10px;
+  background: var(--superficie-2); cursor: pointer; overflow: hidden; line-height: 0;
+}
+.grade-imagens button.escolher:hover { border-color: var(--ambar); }
+.grade-imagens button.escolher img { width: 100%; height: 110px; object-fit: cover; display: block; }
+.grade-imagens figcaption { font-size: 11px; line-height: 1.35; color: var(--tinta-fraca); }
+.grade-imagens .licenca { font-weight: 800; display: block; }
+.grade-imagens .livre { color: var(--ok); }
+.grade-imagens .credito { color: var(--alerta); }
 .btn.arquivo { cursor: pointer; }
 
 .lista-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; }
@@ -427,6 +441,29 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     <button class="btn fantasma pequeno" id="btnCopiarEndereco" type="button">Copiar endereço</button>
     <button class="btn fantasma pequeno" id="btnFecharCelular" type="button">Fechar</button>
   </div>
+</div>
+
+<div id="busca" class="cartao" hidden
+     style="position:fixed;z-index:85;inset:16px;max-width:760px;margin:auto;height:max-content;max-height:calc(100vh - 32px);overflow:auto">
+  <div class="editor-topo">
+    <h2 style="margin:0">Buscar imagem em banco público</h2>
+    <button class="btn fantasma pequeno" id="btnFecharBusca" type="button">Fechar</button>
+  </div>
+  <div class="linha">
+    <input type="text" id="termoBusca" placeholder="Ex.: sede da Controladoria-Geral da União" style="flex:3 1 260px">
+    <select id="fonteBusca" style="flex:1 1 150px">
+      <option value="todas">Todas as fontes</option>
+      <option value="commons">Wikimedia Commons</option>
+      <option value="openverse">Openverse</option>
+    </select>
+    <button class="btn" id="btnBuscar" type="button" style="flex:0 0 auto">Buscar</button>
+  </div>
+  <p class="dica" style="margin:0 0 12px">
+    Prédio público, brasão e sessão de órgão quase sempre já existem com licença livre.
+    O crédito exigido pela licença é gravado no slide e na legenda.
+  </p>
+  <div id="estadoBusca" class="aviso" hidden style="margin-bottom:12px"></div>
+  <div id="resultadosBusca" class="grade-imagens"></div>
 </div>
 
 <div id="teleprompter" hidden>
@@ -1007,6 +1044,15 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       acoes.appendChild(bGerar);
     }
 
+    if (local && pastaLocal) {
+      var bBuscar = document.createElement("button");
+      bBuscar.type = "button";
+      bBuscar.className = "btn fantasma pequeno";
+      bBuscar.textContent = "Buscar imagem real";
+      bBuscar.onclick = function () { abrirBusca(s); };
+      acoes.appendChild(bBuscar);
+    }
+
     var copiar = document.createElement("button");
     copiar.type = "button";
     copiar.className = "btn fantasma pequeno";
@@ -1074,6 +1120,108 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       box.appendChild(nota);
     }
     return box;
+  }
+
+  // ── busca em banco público de imagem ──────────────────────────────────────
+
+  function termoSugerido(s) {
+    // o título do slide costuma ser o melhor palpite; sem ele, o tema
+    var base = (s && (s.titulo || s.faixa || s.texto)) || (estado.carrossel.meta || {}).tema || "";
+    return String(base).replace(/\*/g, "").slice(0, 70);
+  }
+
+  function abrirBusca(s) {
+    $("busca").hidden = false;
+    $("resultadosBusca").innerHTML = "";
+    mostrarEstado($("estadoBusca"), "", "");
+    $("termoBusca").value = termoSugerido(s);
+    $("termoBusca").focus();
+    $("termoBusca").select();
+  }
+
+  function cartaoResultado(r) {
+    var fig = document.createElement("figure");
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "escolher";
+    b.title = r.titulo + " — " + r.licenca;
+    var img = document.createElement("img");
+    img.src = r.thumb;
+    img.alt = r.titulo;
+    img.loading = "lazy";
+    b.appendChild(img);
+    b.onclick = function () { escolherImagem(r, b); };
+    fig.appendChild(b);
+
+    var cap = document.createElement("figcaption");
+    var lic = document.createElement("span");
+    lic.className = "licenca " + (r.exigeCredito ? "credito" : "livre");
+    lic.textContent = r.licenca + (r.exigeCredito ? " · exige crédito" : " · livre");
+    cap.appendChild(lic);
+    cap.appendChild(document.createTextNode(
+      (r.autor ? r.autor + " · " : "") + r.fonte + (r.largura ? " · " + r.largura + "×" + r.altura : "")
+    ));
+    fig.appendChild(cap);
+    return fig;
+  }
+
+  async function buscarImagens() {
+    var termo = $("termoBusca").value.trim();
+    if (!termo) return;
+    var alvo = $("estadoBusca");
+    var grade = $("resultadosBusca");
+    $("btnBuscar").disabled = true;
+    grade.innerHTML = "";
+    mostrarEstado(alvo, "Procurando…", "");
+    try {
+      var r = await api("/api/buscar-imagem", {
+        method: "POST",
+        body: JSON.stringify({ termo: termo, fonte: $("fonteBusca").value })
+      });
+      (r.resultados || []).forEach(function (x) { grade.appendChild(cartaoResultado(x)); });
+      if (!r.resultados || !r.resultados.length) {
+        mostrarEstado(alvo, "Nada encontrado. Tente o nome oficial do órgão, ou em inglês.", "alerta");
+      } else if (r.avisos && r.avisos.length) {
+        mostrarEstado(alvo, r.resultados.length + " resultado(s). Uma fonte não respondeu: " + r.avisos.join("; "), "alerta");
+      } else {
+        mostrarEstado(alvo, r.resultados.length + " resultado(s). Clique para usar no slide.", "ok");
+      }
+    } catch (e) {
+      mostrarEstado(alvo, "A busca falhou: " + e.message, "erro");
+    } finally {
+      $("btnBuscar").disabled = false;
+    }
+  }
+
+  async function escolherImagem(r, botao) {
+    botao.disabled = true;
+    mostrarEstado($("estadoBusca"), "Baixando “" + r.titulo + "”…", "");
+    try {
+      var resp = await api("/api/imagem-de-url", {
+        method: "POST",
+        body: JSON.stringify({
+          pasta: pastaLocal,
+          indice: estado.indice,
+          url: r.url,
+          autor: r.autor,
+          licenca: r.licenca,
+          fonte: r.fonte,
+          pagina: r.pagina,
+          exigeCredito: r.exigeCredito
+        })
+      });
+      estado.carrossel = resp.carrossel;
+      $("busca").hidden = true;
+      pintarTudo();
+      mostrarEstado($("lintSaida"),
+        "Imagem aplicada ao slide " + (estado.indice + 1) + "." +
+        (resp.legendaMudou ? " A licença exige crédito, então ele entrou na legenda." : ""),
+        "ok");
+    } catch (e) {
+      mostrarEstado($("estadoBusca"), "Não deu para usar essa imagem: " + e.message, "erro");
+      botao.disabled = false;
+    }
   }
 
   function atualizarPalco() {
@@ -1869,6 +2017,12 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       $("btnPedir").disabled = false;
     }
   };
+
+  $("btnBuscar").onclick = buscarImagens;
+  $("btnFecharBusca").onclick = function () { $("busca").hidden = true; };
+  $("termoBusca").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); buscarImagens(); }
+  });
 
   $("btnCelular").onclick = abrirPainelCelular;
   $("btnFecharCelular").onclick = function () { $("celular").hidden = true; };

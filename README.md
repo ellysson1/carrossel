@@ -275,8 +275,25 @@ editável: troque o assunto, ajuste a luz, mande gerar de novo. Três ações al
   slide, e já refaz o PNG. No artifact publicado o botão não aparece: a página não
   alcança a Kie.
 - **Copiar prompt** — para gerar onde você preferir, inclusive no Google Flow.
+- **Buscar imagem real** — procura em bancos públicos (Wikimedia Commons e Openverse)
+  e aplica no slide com um clique. Feito para peça sobre órgão público: sede da CGU,
+  brasão, sessão do TCU.
 - **Enviar arquivo** — sobe uma imagem sua; no app local ela é gravada na pasta do
   carrossel e entra no PNG final.
+
+### Licença não é detalhe
+
+Prédio público não torna a foto de domínio público: quem fotografou tem direito sobre a
+foto, a não ser que a tenha licenciado. Por isso cada resultado da busca mostra a licença
+antes de você escolher:
+
+- **verde, "livre"** — domínio público ou CC0: usa sem creditar.
+- **âmbar, "exige crédito"** — CC BY, CC BY-SA e afins: o app grava o crédito no slide
+  **e acrescenta uma linha "Imagem: …" na legenda**, que é onde o Instagram lê.
+
+Brasão e logotipo de órgão federal costumam ser domínio público (Lei 9.610, art. 8º, IV);
+a foto do prédio, em geral, não. A busca mostra o que cada arquivo declara — confira antes
+de publicar.
 
 O estilo da casa e a lista de negativos da marca entram sozinhos no prompt: no campo
 vai só o assunto.

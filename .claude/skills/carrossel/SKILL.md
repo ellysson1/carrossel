@@ -132,6 +132,19 @@ souber que existe fila — faça o seguinte, um pedido de cada vez:
 
 Se a fila estiver vazia, diga isso e não invente trabalho.
 
+## Imagem de órgão público
+
+Para peça sobre CGU, TCU, edital ou sessão, a foto real costuma valer mais que a gerada.
+O app local tem **Buscar imagem real** (Wikimedia Commons e Openverse); pela CLI, o
+equivalente é escolher a imagem no app e seguir daí.
+
+Ao usar imagem de terceiro, a licença manda: domínio público e CC0 dispensam crédito;
+CC BY e CC BY-SA exigem, e o app põe o crédito no slide e na legenda. Nunca tire o
+crédito que o app escreveu para "limpar" a peça — é condição da licença.
+
+Prédio público não é sinônimo de foto livre: quem fotografou tem direito sobre a foto.
+Brasão e logotipo de órgão federal, em geral, são domínio público (Lei 9.610, art. 8º).
+
 ## Regras da marca
 
 Elas já estão dentro da ferramenta — `brand/brand.json` para paleta e voz,

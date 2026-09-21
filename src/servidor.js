@@ -11,6 +11,7 @@ import { spawn } from "node:child_process";
 import { RAIZ, brand, lint, cores, garantirPasta, slug } from "./nucleo.js";
 import { gerarCarrossel, gerarSlide, gerarRoteiro } from "./copy/gerar.js";
 import { gerarImagens, provedorAtual } from "./images/index.js";
+import { buscar, baixar, creditoDe } from "./images/bancos.js";
 import { renderizarPNGs, escreverPreview, medirAjuste, abrirNavegador } from "./render.js";
 
 const PASTA_OUT = garantirPasta(path.join(RAIZ, "out"));
@@ -362,6 +363,57 @@ async function rotear(req, res) {
   if (rota === "/api/lint" && req.method === "POST") {
     const corpo = await lerCorpo(req);
     return responder(res, 200, lint.lint(corpo, brand));
+  }
+
+  if (rota === "/api/buscar-imagem" && req.method === "POST") {
+    const corpo = await lerCorpo(req);
+    try {
+      const r = await buscar(corpo.termo, { fonte: corpo.fonte || "todas", limite: 24 });
+      return responder(res, 200, r);
+    } catch (e) {
+      return responder(res, 502, { erro: e.message });
+    }
+  }
+
+  /* Imagem escolhida na busca: baixa para a pasta do carrossel e guarda a licença
+     junto. Crédito que a licença exige vai para o slide e para a legenda. */
+  if (rota === "/api/imagem-de-url" && req.method === "POST") {
+    const corpo = await lerCorpo(req);
+    const pasta = pastaSegura(corpo.pasta);
+    const c = lerCarrossel(pasta);
+    const i = Number(corpo.indice);
+    const slide = (c.slides || [])[i];
+    if (!slide) return responder(res, 400, { erro: "slide inexistente" });
+
+    let baixada;
+    try {
+      baixada = await baixar(corpo.url);
+    } catch (e) {
+      return responder(res, 502, { erro: e.message });
+    }
+
+    const nome = `banco-${String(i + 1).padStart(2, "0")}-${Date.now()}.${baixada.extensao}`;
+    fs.writeFileSync(path.join(garantirPasta(path.join(pasta, "img")), nome), baixada.buffer);
+
+    const credito = creditoDe({ autor: corpo.autor, licenca: corpo.licenca, fonte: corpo.fonte });
+    slide.imagem = Object.assign({}, slide.imagem, {
+      arquivo: `img/${nome}`,
+      credito: corpo.exigeCredito ? credito : (slide.imagem && slide.imagem.credito) || "",
+      licenca: corpo.licenca || "",
+      origem: corpo.pagina || corpo.url
+    });
+    delete slide.imagem.url;
+    delete slide.imagem.dataUrl;
+
+    // licença que exige atribuição: o crédito entra na legenda, onde o Instagram lê
+    let legendaMudou = false;
+    if (corpo.exigeCredito && credito && !(c.legenda || "").includes(credito)) {
+      c.legenda = `${(c.legenda || "").trimEnd()}\n\nImagem: ${credito}`.trim();
+      legendaMudou = true;
+    }
+
+    salvarCarrossel(pasta, c);
+    return responder(res, 200, { carrossel: c, arquivo: `img/${nome}`, legendaMudou });
   }
 
   if (rota === "/api/imagem" && req.method === "POST") {
