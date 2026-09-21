@@ -10,7 +10,7 @@
   "scripts": {
     "carrossel": "node bin/carrossel.js",
     "build:artifact": "node scripts/build-artifact.js",
-    "test": "node --test test/",
+    "test": "node --test \"test/**/*.test.mjs\"",
     "start": "npm run build:artifact && node bin/carrossel.js app",
     "app": "node bin/carrossel.js app"
   },
@@ -20,5 +20,8 @@
   "dependencies": {
     "@fontsource/nunito": "^5.1.0",
     "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "html2canvas": "^1.4.1"
   }
 }

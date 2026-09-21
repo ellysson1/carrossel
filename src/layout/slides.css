@@ -13,6 +13,8 @@
   --branco: #FFFFFF;
   --tinta-clara: #2A1F00;
 
+  --trilho: rgba(255, 255, 255, 0.14);
+  --preenche: rgba(255, 255, 255, 0.34);
   --pad: 72px;
   --k: 1; /* multiplicador de auto-ajuste tipográfico */
   --tinta: var(--branco);
@@ -302,8 +304,10 @@
 .slide .barras { display: flex; flex-direction: column; gap: 24px; }
 .slide .barra .barra-topo { display: flex; justify-content: space-between; align-items: baseline; font-size: calc(24px * var(--k)); font-weight: 700; margin-bottom: 10px; }
 .slide .barra .barra-valor { font-variant-numeric: tabular-nums; font-weight: 800; }
-.slide .barra .trilho { height: 28px; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 14%, transparent); overflow: hidden; }
-.slide .barra .preenche { height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--tinta) 34%, transparent); }
+/* rgba explícito, não color-mix: o Chrome serializa color-mix como color(srgb …),
+   que o html2canvas do app não sabe ler — e a exportação do celular quebrava. */
+.slide .barra .trilho { height: 28px; border-radius: 4px; background: var(--trilho); overflow: hidden; }
+.slide .barra .preenche { height: 100%; border-radius: 4px; background: var(--preenche); }
 .slide .barra.destaque .preenche { background: var(--amarelo); }
 .slide .barra.destaque .barra-topo { color: var(--tinta); }
 
@@ -338,7 +342,11 @@
 
 /* em fundo claro o acento é a tinta escura: amarelo sobre creme não se lê */
 .slide.fundo-claro,
-.slide.fundo-creme { --acento: var(--escuro); }
+.slide.fundo-creme {
+  --acento: var(--escuro);
+  --trilho: rgba(13, 43, 94, 0.12);
+  --preenche: rgba(13, 43, 94, 0.32);
+}
 .slide.fundo-escuro,
 .slide.fundo-medio,
 .slide.fundo-foto { --acento: var(--amarelo); }

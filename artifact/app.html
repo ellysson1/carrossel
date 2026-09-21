@@ -21,6 +21,7 @@
   --ok: #17754A;
   --alerta: #9A6206;
   --erro: #A62A21;
+  --fundo-barra: rgba(238, 241, 246, 0.9);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -34,6 +35,7 @@
     --ok: #59C48E;
     --alerta: #F0BE58;
     --erro: #F08279;
+    --fundo-barra: rgba(7, 22, 46, 0.9);
   }
 }
 :root[data-theme="dark"] {
@@ -47,6 +49,7 @@
   --ok: #59C48E;
   --alerta: #F0BE58;
   --erro: #F08279;
+  --fundo-barra: rgba(7, 22, 46, 0.9);
 }
 
 * { box-sizing: border-box; }
@@ -69,7 +72,7 @@ body {
   position: sticky;
   top: env(safe-area-inset-top, 0px);
   z-index: 40;
-  background: color-mix(in srgb, var(--fundo) 88%, transparent);
+  background: var(--fundo-barra);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--borda);
 }
@@ -105,8 +108,8 @@ body {
   display: inline-flex; align-items: center; gap: 6px;
 }
 .chip .ponto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.chip.ligado { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--borda)); }
-.chip.manual { color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 40%, var(--borda)); }
+.chip.ligado { color: var(--ok); border-color: currentColor; }
+.chip.manual { color: var(--alerta); border-color: currentColor; }
 
 /* ── abas ────────────────────────────────────────────────────────────────── */
 
@@ -188,9 +191,9 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 .btn.largo { width: 100%; }
 
 .aviso { font-size: 13px; border-radius: 9px; padding: 10px 12px; border: 1px solid var(--borda); background: var(--superficie-2); }
-.aviso.erro { color: var(--erro); border-color: color-mix(in srgb, var(--erro) 35%, var(--borda)); }
-.aviso.alerta { color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 35%, var(--borda)); }
-.aviso.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--borda)); }
+.aviso.erro { color: var(--erro); border-color: currentColor; }
+.aviso.alerta { color: var(--alerta); border-color: currentColor; }
+.aviso.ok { color: var(--ok); border-color: currentColor; }
 
 .fluxo { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.5;
   max-height: 150px; overflow: auto; white-space: pre-wrap; word-break: break-word;
