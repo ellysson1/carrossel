@@ -13,6 +13,7 @@ import { gerarCarrossel, gerarSlide, gerarRoteiro } from "./copy/gerar.js";
 import { gerarImagens, provedorAtual } from "./images/index.js";
 import { buscar, baixar, creditoDe } from "./images/bancos.js";
 import { renderizarPNGs, escreverPreview, medirAjuste, abrirNavegador } from "./render.js";
+import { buscarPedidos, processarPedidos, prepararEntrega } from "./ponte.js";
 
 const PASTA_OUT = garantirPasta(path.join(RAIZ, "out"));
 const TIPOS = {
@@ -272,6 +273,22 @@ const ACOES = {
     c.slides[i] = await gerarSlide(c, i, dados.instrucao || null);
     salvarCarrossel(pasta, c);
     return { pasta: path.basename(pasta), carrossel: c };
+  },
+
+  /** Botão "Buscar pedidos do celular": Drive → out/_pedidos → imagens → entrega. */
+  async pedidos(t, dados) {
+    const b = await buscarPedidos((m) => anotar(t, m));
+    anotar(t, b.novos ? `${b.novos} pedido(s) novo(s) no Drive` : "nenhum pedido novo no Drive");
+    const feitos = await processarPedidos((m) => anotar(t, m), { provedor: dados.provedor || undefined });
+    return { novos: b.novos, feitos, custo: b.custo };
+  },
+
+  /** Botão "Mandar para o celular": deixa a pasta aberta pronta para o app buscar. */
+  async enviar(t, dados) {
+    const pasta = pastaSegura(dados.pasta);
+    if (dados.carrossel) salvarCarrossel(pasta, dados.carrossel);
+    const e = await prepararEntrega(pasta, (m) => anotar(t, m));
+    return { pasta: e.pasta, carrossel: e.carrossel };
   },
 
   async roteiro(t, dados) {

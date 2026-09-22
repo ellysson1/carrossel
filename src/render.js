@@ -41,6 +41,7 @@ export function montarHTML(carrossel, opcoes = {}) {
     cabecalho: brand.cabecalho,
     logo: logoDataUrl(),
     seloTexto: (brand.selo && brand.selo.texto) || "NC",
+    seloEstilo: (brand.selo && brand.selo.estilo) || "asterisco",
     imagem: (ref) => {
       if (!ref) return null;
       if (ref.dataUrl) return ref.dataUrl;

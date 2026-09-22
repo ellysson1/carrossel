@@ -256,6 +256,28 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 .grade-imagens .credito { color: var(--alerta); }
 .btn.arquivo { cursor: pointer; }
 
+/* aparência do slide: amostras de cor, alinhamento, mover blocos */
+.bloco-aparencia { border-top: 1px solid var(--borda); padding-top: 14px; margin-top: 4px; gap: 10px; }
+.linha-cor { display: flex; flex-direction: column; gap: 6px; }
+.rotulo-cor { font-size: 12px; font-weight: 800; color: var(--tinta); }
+.amostras { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.amostra {
+  appearance: none; width: 32px; height: 32px; padding: 0; cursor: pointer;
+  border-radius: 50%; border: 2px solid var(--borda); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.amostra.escolhida { outline: 3px solid var(--azul); outline-offset: 2px; }
+.amostra.ilegivel { cursor: not-allowed; opacity: .35; background-image: linear-gradient(135deg, transparent 45%, var(--erro) 45%, var(--erro) 55%, transparent 55%) !important; }
+input.amostra.livre { width: 40px; border-radius: 9px; background: none; }
+.segmentado { display: inline-flex; border: 1px solid var(--borda); border-radius: 9px; overflow: hidden; align-self: flex-start; }
+.segmentado button {
+  appearance: none; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+  border: 0; padding: 7px 12px; background: var(--superficie-2); color: var(--tinta);
+}
+.segmentado button + button { border-left: 1px solid var(--borda); }
+.segmentado button[aria-pressed="true"] { background: var(--marinho); color: #fff; }
+#molduraPalco.modo-mover [data-bloco] { cursor: grab; touch-action: none; outline: 6px dashed var(--ambar); outline-offset: 8px; border-radius: 4px; }
+#molduraPalco.modo-mover [data-bloco].arrastando { cursor: grabbing; outline-style: solid; }
+
 .lista-hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; }
 .lista-hist button {
   width: 100%; text-align: left; font: inherit; cursor: pointer;
@@ -360,6 +382,11 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
           <h2>Histórico</h2>
           <ul class="lista-hist" id="historico"></ul>
           <p class="dica" id="semHistorico">Os carrosséis gerados ficam salvos aqui.</p>
+          <div class="linha" style="margin-top:12px">
+            <button class="btn fantasma pequeno" id="btnBuscarPedidos" type="button" hidden>Buscar pedidos do celular</button>
+            <button class="btn fantasma pequeno" id="btnTrazerPC" type="button" hidden>Trazer do PC</button>
+          </div>
+          <div id="estadoPonte" class="aviso" hidden style="margin-top:10px"></div>
         </section>
       </div>
 
@@ -370,6 +397,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
             <div class="linha" style="flex:0 0 auto">
               <button class="btn fantasma pequeno" id="btnImagens" type="button" hidden>Gerar as imagens que faltam</button>
               <button class="btn fantasma pequeno" id="btnPedir" type="button" hidden>Pedir imagens no PC</button>
+              <button class="btn fantasma pequeno" id="btnMandar" type="button" hidden>Mandar para o celular</button>
               <button class="btn fantasma pequeno icone" id="btnDesfazer" type="button" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled>↶</button>
               <button class="btn fantasma pequeno icone" id="btnRefazer" type="button" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer" disabled>↷</button>
               <button class="btn fantasma pequeno" id="btnLint" type="button">Conferir voz da marca</button>
@@ -500,7 +528,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
 
   var $ = function (id) { return document.getElementById(id); };
   var estado = { carrossel: null, indice: 0, id: null, roteiro: null };
-  var caps = { sample: null, db: null, assets: null, downloads: null };
+  var caps = { sample: null, db: null, assets: null, downloads: null, mcp: null };
   var controle = null;
 
   // ── backend: artifact publicado (capabilities) ou app local (servidor) ────
@@ -600,6 +628,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       cabecalho: brand.cabecalho,
       logo: logoDaMarca,
       seloTexto: (brand.selo && brand.selo.texto) || "NC",
+      seloEstilo: (brand.selo && brand.selo.estilo) || "asterisco",
       imagem: urlDaImagem
     };
   }
@@ -911,7 +940,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     topo.appendChild(rotulo);
     var acoes = document.createElement("div");
     acoes.className = "linha";
-    acoes.style.flex = "0 0 auto";
+    acoes.style.flex = "1 1 240px";
+    acoes.style.minWidth = "0";
     var total = ((estado.carrossel && estado.carrossel.slides) || []).length;
     [["\u25c0", "Mover para trás", -1], ["\u25b6", "Mover para a frente", 1]].forEach(function (def) {
       var bm = document.createElement("button");
@@ -949,6 +979,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     topo.appendChild(acoes);
     ed.appendChild(topo);
     if ((s.tipo === "capa" || s.tipo === "imagem") && urlDaImagem(s.imagem)) ed.appendChild(controleDeFoto(s));
+    ed.appendChild(blocoAparencia(s));
 
     var dica = document.createElement("p");
     dica.className = "dica";
@@ -1229,7 +1260,10 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     var s = lista[estado.indice];
     if (!s) return;
     pintarMoldura($("molduraPalco"), s, estado.indice + 1, lista.length);
-    ligarEdicaoDireta($("molduraPalco"));
+    // mover blocos e digitar no slide disputam o mesmo clique: um modo de cada vez
+    if (modoMover) ligarMover($("molduraPalco"));
+    else ligarEdicaoDireta($("molduraPalco"));
+    $("molduraPalco").classList.toggle("modo-mover", modoMover);
     ligarEnquadramento($("molduraPalco"));
     var thumb = $("tira").children[estado.indice];
     if (thumb) pintarMoldura(thumb.querySelector(".moldura"), s, estado.indice + 1, lista.length);
@@ -1569,6 +1603,251 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     r.onclick = function () { gravarEnquadramento(null); };
     box.appendChild(r);
     return box;
+  }
+
+  // ── aparência: cor, alinhamento e posição dos blocos ─────────────────────
+  //
+  // A cor é escolha do autor, a legibilidade não: o motor mede o contraste
+  // e troca a tinta que não se lê. Aqui a escolha ruim já aparece como ruim —
+  // a cor de texto que não passa de 4,5:1 fica riscada e diz por quê.
+
+  var CORES_MARCA = [
+    ["#0D2B5E", "Marinho"], ["#1A4A9C", "Azul"], ["#F4F5F7", "Gelo"], ["#FFF7E0", "Creme"],
+    ["#F5C842", "Âmbar"], ["#E8590C", "Laranja"], ["#FFFFFF", "Branco"], ["#0A0F1C", "Preto"]
+  ];
+  var PAPEIS = { fundo: "Fundo", texto: "Texto", destaque: "Destaque (caixa e palavra marcada)" };
+  var modoMover = false;
+
+  function fundoEfetivo(s, i) {
+    var proprio = L.hexValido(s.cores && s.cores.fundo);
+    if (proprio) return proprio;
+    var lista = slidesComFundo();
+    return L.HEX_FUNDO[(lista[i] || {}).fundo] || L.HEX_FUNDO.escuro;
+  }
+
+  function razao(n) { return n.toFixed(1).replace(".", ",") + ":1"; }
+
+  function mudarCor(s, papel, valor) {
+    var c = Object.assign({}, s.cores);
+    if (valor) c[papel] = valor; else delete c[papel];
+    if (Object.keys(c).length) s.cores = c; else delete s.cores;
+    atualizarPalco();
+    pintarEditor();
+    salvar();
+  }
+
+  function linhaDeCor(s, papel) {
+    var fundo = fundoEfetivo(s, estado.indice);
+    var atual = L.hexValido(s.cores && s.cores[papel]);
+    var wrap = document.createElement("div");
+    wrap.className = "linha-cor";
+    var rot = document.createElement("span");
+    rot.className = "rotulo-cor";
+    rot.textContent = PAPEIS[papel];
+    wrap.appendChild(rot);
+
+    var amostras = document.createElement("div");
+    amostras.className = "amostras";
+    CORES_MARCA.forEach(function (par) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "amostra" + (atual === par[0] ? " escolhida" : "");
+      b.style.background = par[0];
+      var r = papel === "texto" ? L.contraste(par[0], fundo) : papel === "destaque" ? L.contraste(par[0], fundo) : null;
+      var ilegivel = papel === "texto" && r < 4.5;
+      b.title = par[1] + (r ? " · contraste " + razao(r) + " com o fundo" : "") + (ilegivel ? " — ilegível aqui" : "");
+      b.setAttribute("aria-label", b.title);
+      if (ilegivel) { b.classList.add("ilegivel"); b.disabled = true; }
+      b.onclick = function () { mudarCor(s, papel, par[0]); };
+      amostras.appendChild(b);
+    });
+    var livre = document.createElement("input");
+    livre.type = "color";
+    livre.className = "amostra livre";
+    livre.value = atual || (papel === "fundo" ? fundo : papel === "texto" ? L.melhorTinta(fundo) : "#F5C842");
+    livre.title = "Outra cor";
+    livre.setAttribute("aria-label", PAPEIS[papel] + ": outra cor");
+    livre.onchange = function () { mudarCor(s, papel, livre.value.toUpperCase()); };
+    amostras.appendChild(livre);
+    var auto = document.createElement("button");
+    auto.type = "button";
+    auto.className = "btn fantasma pequeno";
+    auto.textContent = "Padrão";
+    auto.title = "Voltar à cor que a marca escolhe";
+    auto.disabled = !atual;
+    auto.onclick = function () { mudarCor(s, papel, null); };
+    amostras.appendChild(auto);
+    wrap.appendChild(amostras);
+
+    if (papel === "texto" && atual) {
+      var usada = L.tintaLegivel(atual, fundo);
+      var nota = document.createElement("span");
+      nota.className = "dica";
+      nota.textContent = usada === atual
+        ? "Contraste " + razao(L.contraste(atual, fundo)) + " com o fundo — legível."
+        : "Contraste " + razao(L.contraste(atual, fundo)) + ": ilegível. O slide usa " + usada + " no lugar.";
+      wrap.appendChild(nota);
+    }
+    return wrap;
+  }
+
+  function aplicarATodos(chave, valor) {
+    (estado.carrossel.slides || []).forEach(function (x) {
+      if (valor == null) delete x[chave];
+      else x[chave] = copiaProfunda(valor);
+    });
+    pintarTudo();
+    salvar();
+  }
+
+  function blocoAparencia(s) {
+    var box = document.createElement("div");
+    box.className = "campo bloco-aparencia";
+    var tit = document.createElement("label");
+    tit.textContent = "Aparência deste slide";
+    box.appendChild(tit);
+
+    ["fundo", "texto", "destaque"].forEach(function (p) { box.appendChild(linhaDeCor(s, p)); });
+
+    var todasCores = document.createElement("div");
+    todasCores.className = "linha";
+    [["Estas cores em todos os slides", function () { aplicarATodos("cores", s.cores || null); }, !s.cores],
+     ["Cores da marca em todos", function () { aplicarATodos("cores", null); }, false]
+    ].forEach(function (d) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn fantasma pequeno";
+      b.textContent = d[0];
+      b.disabled = d[2];
+      b.onclick = d[1];
+      todasCores.appendChild(b);
+    });
+    box.appendChild(todasCores);
+
+    // alinhamento
+    var linhaAl = document.createElement("div");
+    linhaAl.className = "linha-cor";
+    var rotAl = document.createElement("span");
+    rotAl.className = "rotulo-cor";
+    rotAl.textContent = "Alinhamento do texto";
+    linhaAl.appendChild(rotAl);
+    var grupo = document.createElement("div");
+    grupo.className = "segmentado";
+    grupo.setAttribute("role", "group");
+    var padrao = s.tipo === "capa" ? "centro" : "esquerda";
+    var atualAl = s.alinhamento || padrao;
+    [["esquerda", "À esquerda"], ["justificado", "Justificado"], ["centro", "Centralizado"]].forEach(function (a) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = a[1];
+      b.setAttribute("aria-pressed", String(atualAl === a[0]));
+      b.onclick = function () {
+        if (a[0] === padrao) delete s.alinhamento; else s.alinhamento = a[0];
+        atualizarPalco();
+        pintarEditor();
+        salvar();
+      };
+      grupo.appendChild(b);
+    });
+    linhaAl.appendChild(grupo);
+    var alTodos = document.createElement("button");
+    alTodos.type = "button";
+    alTodos.className = "btn fantasma pequeno";
+    alTodos.textContent = "Em todos os slides";
+    alTodos.onclick = function () {
+      (estado.carrossel.slides || []).forEach(function (x) {
+        if (x.tipo === "capa") return;          // a capa tem eixo próprio
+        if (atualAl === "esquerda") delete x.alinhamento; else x.alinhamento = atualAl;
+      });
+      pintarTudo();
+      salvar();
+    };
+    linhaAl.appendChild(alTodos);
+    box.appendChild(linhaAl);
+
+    // mover blocos
+    var linhaMv = document.createElement("div");
+    linhaMv.className = "linha";
+    var bMv = document.createElement("button");
+    bMv.type = "button";
+    bMv.className = "btn pequeno" + (modoMover ? " principal" : " fantasma");
+    bMv.textContent = modoMover ? "Pronto, voltar a editar texto" : "Mover blocos no slide";
+    bMv.setAttribute("aria-pressed", String(modoMover));
+    bMv.onclick = function () { modoMover = !modoMover; atualizarPalco(); pintarEditor(); };
+    linhaMv.appendChild(bMv);
+    var bRz = document.createElement("button");
+    bRz.type = "button";
+    bRz.className = "btn fantasma pequeno";
+    bRz.textContent = "Redefinir posições";
+    bRz.disabled = !s.posicoes;
+    bRz.onclick = function () { delete s.posicoes; atualizarPalco(); pintarEditor(); salvar(); };
+    linhaMv.appendChild(bRz);
+    box.appendChild(linhaMv);
+    if (modoMover) {
+      var dMv = document.createElement("span");
+      dMv.className = "dica";
+      dMv.textContent = "Arraste título, texto, lista ou foto para onde quiser. Cada bloco anda sozinho; o texto continua cabendo.";
+      box.appendChild(dMv);
+    }
+    return box;
+  }
+
+  var mov = null;
+
+  function ligarMover(moldura) {
+    var slideEl = moldura.querySelector(".slide");
+    if (!slideEl) return;
+    L.posicionarBlocos(slideEl);
+    var blocos = slideEl.querySelectorAll(".corpo > [data-bloco]");
+    for (var i = 0; i < blocos.length; i++) {
+      blocos[i].addEventListener("pointerdown", aoPegarBloco);
+      blocos[i].addEventListener("pointermove", aoArrastarBloco);
+      blocos[i].addEventListener("pointerup", aoSoltarBloco);
+      blocos[i].addEventListener("pointercancel", aoSoltarBloco);
+    }
+  }
+
+  function aoPegarBloco(ev) {
+    if (ev.pointerType !== "touch" && ev.button !== 0) return;
+    var s = slideEmEdicao();
+    if (!s) return;
+    var el = ev.currentTarget;
+    var chave = el.getAttribute("data-bloco");
+    var p = (s.posicoes && s.posicoes[chave]) || { x: 0, y: 0 };
+    var z = $("molduraPalco").clientWidth / brand.formato.largura;
+    mov = { el: el, chave: chave, x0: ev.clientX, y0: ev.clientY, px: numero(p.x, 0), py: numero(p.y, 0), z: z || 1, x: numero(p.x, 0), y: numero(p.y, 0) };
+    try { el.setPointerCapture(ev.pointerId); } catch (e) { /* ponteiro já solto */ }
+    el.classList.add("arrastando");
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  function aoArrastarBloco(ev) {
+    if (!mov || mov.el !== ev.currentTarget) return;
+    ev.preventDefault();
+    // grade de 4px, a mesma do layout
+    mov.x = Math.round((mov.px + (ev.clientX - mov.x0) / mov.z) / 4) * 4;
+    mov.y = Math.round((mov.py + (ev.clientY - mov.y0) / mov.z) / 4) * 4;
+    mov.x = limitar(mov.x, -brand.formato.largura, brand.formato.largura);
+    mov.y = limitar(mov.y, -brand.formato.altura, brand.formato.altura);
+    mov.el.style.transform = "translate(" + mov.x + "px," + mov.y + "px)";
+  }
+
+  function aoSoltarBloco(ev) {
+    if (!mov || mov.el !== ev.currentTarget) return;
+    var m = mov;
+    mov = null;
+    m.el.classList.remove("arrastando");
+    if (m.x === m.px && m.y === m.py) return;
+    var s = slideEmEdicao();
+    if (!s) return;
+    s.posicoes = Object.assign({}, s.posicoes);
+    if (m.x || m.y) s.posicoes[m.chave] = { x: m.x, y: m.y };
+    else delete s.posicoes[m.chave];
+    if (!Object.keys(s.posicoes).length) delete s.posicoes;
+    atualizarPalco();
+    pintarEditor();
+    salvar();
   }
 
   // ── slides: novo, duplicar, apagar, trocar o tipo ─────────────────────────
@@ -1996,25 +2275,178 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     }
   };
 
+  // ── ponte celular ↔ PC ──────────────────────────────────────────────────
+  //
+  // Ida: o pedido vai como JSON para uma pasta sua no Google Drive, pelo
+  // conector (a página não alcança a internet, o conector sim).
+  // Volta: o PC deixa a entrega em out/_entregas, no OneDrive; a página lê
+  // pelo conector do Microsoft 365 e sobe as fotos no acervo dela.
+  // Nada roda sozinho: cada lado anda quando você toca o botão.
+
+  var PONTE = brand.ponte || {};
+  var SRV_DRIVE = "Google Drive";
+  var SRV_M365 = "Microsoft 365";
+
+  function mensagemMcp(e, servidor) {
+    var c = e && e.code;
+    if (c === "server_not_connected" || c === "server_not_found") return "Conecte o " + servidor + " em claude.ai → Configurações → Conectores e tente de novo.";
+    if (c === "needs_reauth") return "O " + servidor + " pediu login de novo: reconecte em claude.ai → Configurações → Conectores.";
+    if (c === "not_in_manifest" || c === "consent_required") return "Esta página não tem permissão para usar o " + servidor + ". Toque de novo e permita quando o Claude perguntar.";
+    if (c === "selection_required") return "Você tem mais de um " + servidor + " conectado: escolha um no aviso do Claude e toque de novo.";
+    if (c === "blocked_by_policy" || c === "approval_required") return "A política da sua organização bloqueia o " + servidor + " aqui.";
+    if (c === "server_unavailable") return "O " + servidor + " não respondeu agora. Tente de novo em instantes.";
+    return "O " + servidor + " recusou: " + ((e && e.message) || e);
+  }
+
+  function textoDoResultado(r) {
+    return ((r && r.content) || []).filter(function (b) { return b.type === "text"; })
+      .map(function (b) { return b.text; }).join("\n");
+  }
+
+  function carrosselParaPedido(c) {
+    var copia = copiaProfunda(c);
+    (copia.slides || []).forEach(function (s) {
+      if (s.imagem) { delete s.imagem.dataUrl; delete s.imagem.url; delete s.imagem.assetId; delete s.imagem.celular; }
+    });
+    return copia;
+  }
+
   $("btnPedir").onclick = async function () {
     var alvo = $("lintSaida");
-    if (!caps.db) { mostrarEstado(alvo, "Esta visualização não guarda pedidos.", "alerta"); return; }
+    if (!caps.mcp || !PONTE.drivePedidos) { mostrarEstado(alvo, "Esta visualização não alcança o Google Drive.", "alerta"); return; }
     $("btnPedir").disabled = true;
+    var tema = (estado.carrossel.meta || {}).tema || "sem tema";
+    var corpo = { criadoEm: Date.now(), tema: tema, carrossel: carrosselParaPedido(estado.carrossel) };
     try {
-      await caps.db.collection("pedidos").add({
-        status: "pendente",
-        criadoEm: Date.now(),
-        tema: (estado.carrossel.meta || {}).tema || "sem tema",
-        carrossel: estado.carrossel
+      mostrarEstado(alvo, "Enviando o pedido para o seu Google Drive…", "");
+      await caps.mcp.callTool(SRV_DRIVE, "create_file", {
+        title: "pedido-" + corpo.criadoEm + ".json",
+        textContent: JSON.stringify(corpo),
+        contentMimeType: "application/json",
+        disableConversionToGoogleType: true,
+        parentId: PONTE.drivePedidos
       });
+      if (caps.db) {
+        caps.db.collection("pedidos").add({ status: "no-drive", criadoEm: corpo.criadoEm, tema: tema }).catch(function () {});
+      }
       mostrarEstado(alvo,
-        "Pedido na fila. No computador, abra o Claude Code na pasta do projeto e diga " +
-        "\u201cprocessa os pedidos do celular\u201d: ele gera as imagens, renderiza os PNG e " +
-        "devolve o carrossel aqui no histórico, pronto para baixar.", "ok");
+        "Pedido no Drive. No PC, abra o app e toque em “Buscar pedidos do celular”. " +
+        "Quando ele terminar, toque aqui em “Trazer do PC” (no Histórico).", "ok");
     } catch (e) {
-      mostrarEstado(alvo, "Não consegui registrar o pedido: " + (e.message || e), "erro");
+      mostrarEstado(alvo, mensagemMcp(e, SRV_DRIVE), "erro");
     } finally {
       $("btnPedir").disabled = false;
+    }
+  };
+
+  function idSeguro(nome) { return String(nome).replace(/[^A-Za-z0-9_\-.~:@+]/g, "_").slice(0, 200); }
+
+  function blobDeBase64(b64, tipo) {
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: tipo || "image/jpeg" });
+  }
+
+  function lerOneDrive(uri) {
+    return caps.mcp.callTool(SRV_M365, "read_resource", { uri: uri }, { cache: false });
+  }
+
+  async function trazerDoPC() {
+    var alvo = $("estadoPonte");
+    if (!caps.mcp || !PONTE.onedriveBase) { mostrarEstado(alvo, "Esta visualização não alcança o OneDrive.", "alerta"); return; }
+    if (!caps.db || !caps.assets) { mostrarEstado(alvo, "Abra a página como dona dela para guardar o que vier do PC.", "alerta"); return; }
+    $("btnTrazerPC").disabled = true;
+    try {
+      mostrarEstado(alvo, "Procurando o que o PC deixou pronto…", "");
+      var drives = textoDoResultado(await lerOneDrive("drive:///users/me"));
+      var m = /^OneDrive \(drive\) (file:\/\/\/\S+?)\/?$/m.exec(drives);
+      if (!m) throw { code: "sem_onedrive", message: "não achei o seu OneDrive entre os drives da conta" };
+      var raiz = m[1] + "/" + PONTE.onedriveBase + "/out/_entregas";
+      var lista;
+      try { lista = textoDoResultado(await lerOneDrive(raiz)); }
+      catch (e) { if (e && e.code === "tool_error") lista = ""; else throw e; }
+      var nomes = [];
+      lista.split("\n").forEach(function (l) {
+        var x = /^(.+?\.json) \(file,/.exec(l.trim());
+        if (x) nomes.push(x[1]);
+      });
+      var novos = [];
+      for (var i = 0; i < nomes.length; i++) {
+        var marca = await caps.db.doc("entregas/" + idSeguro(nomes[i])).get();
+        if (!marca.exists) novos.push(nomes[i]);
+      }
+      if (!novos.length) { mostrarEstado(alvo, "Nada novo no PC. Lá, toque em “Buscar pedidos do celular” ou “Mandar para o celular”.", "ok"); return; }
+
+      var trazidos = [];
+      for (var j = 0; j < novos.length; j++) {
+        var nome = novos[j];
+        mostrarEstado(alvo, "Trazendo " + (j + 1) + " de " + novos.length + ": " + nome.replace(/\.json$/, "") + "…", "");
+        var bruto = textoDoResultado(await lerOneDrive(raiz + "/" + nome));
+        var entrega = JSON.parse(bruto.slice(bruto.indexOf("{"), bruto.lastIndexOf("}") + 1));
+        var c = entrega.carrossel;
+        var base = m[1] + "/" + PONTE.onedriveBase + "/out/" + entrega.pasta + "/";
+        var slides = c.slides || [];
+        for (var k = 0; k < slides.length; k++) {
+          var im = slides[k].imagem;
+          if (!im || !im.celular) continue;
+          var r = await lerOneDrive(base + im.celular);
+          var bloco = (r.content || []).filter(function (b) { return b.type === "image"; })[0];
+          if (!bloco) continue;
+          var up = await caps.assets.upload(blobDeBase64(bloco.data, bloco.mimeType));
+          im.url = up.url;
+          im.assetId = up.id;
+          delete im.celular;
+        }
+        var doc = {
+          tema: entrega.tema || (c.meta || {}).tema || "sem tema",
+          tipo: (c.meta || {}).tipo || "",
+          atualizadoEm: Date.now(),
+          origem: "pc",
+          carrossel: c
+        };
+        await caps.db.collection("carrosseis").add(doc);
+        await caps.db.doc("entregas/" + idSeguro(nome)).set({ trazidoEm: Date.now(), pasta: entrega.pasta });
+        trazidos.push(doc.tema);
+      }
+      mostrarEstado(alvo, "Chegou do PC: " + trazidos.join("; ") + ". Já está no histórico.", "ok");
+    } catch (e) {
+      mostrarEstado(alvo, e && e.code === "sem_onedrive" ? "Não achei o seu OneDrive: " + e.message + "." : mensagemMcp(e, SRV_M365), "erro");
+    } finally {
+      $("btnTrazerPC").disabled = false;
+    }
+  }
+  $("btnTrazerPC").onclick = trazerDoPC;
+
+  $("btnBuscarPedidos").onclick = async function () {
+    var alvo = $("estadoPonte");
+    $("btnBuscarPedidos").disabled = true;
+    try {
+      var r = await rodarTarefa({ acao: "pedidos", provedor: provedorEscolhido() }, mostrarAndamento(alvo));
+      $("fluxo").hidden = true;
+      historicoLocal();
+      mostrarEstado(alvo, r.feitos.length
+        ? "Pronto: " + r.feitos.map(function (f) { return f.tema; }).join("; ") + ". No celular, toque em “Trazer do PC”."
+        : "Nenhum pedido novo no Drive.", "ok");
+    } catch (e) {
+      mostrarEstado(alvo, "Não deu para buscar os pedidos: " + e.message, "erro");
+    } finally {
+      $("btnBuscarPedidos").disabled = false;
+    }
+  };
+
+  $("btnMandar").onclick = async function () {
+    var alvo = $("lintSaida");
+    if (!pastaLocal) { mostrarEstado(alvo, "Abra um carrossel salvo antes de mandar.", "alerta"); return; }
+    $("btnMandar").disabled = true;
+    try {
+      await rodarTarefa({ acao: "enviar", pasta: pastaLocal, carrossel: estado.carrossel }, mostrarAndamento(alvo));
+      $("fluxo").hidden = true;
+      mostrarEstado(alvo, "Pronto para o celular. O OneDrive sincroniza em alguns segundos; lá, toque em “Trazer do PC”.", "ok");
+    } catch (e) {
+      mostrarEstado(alvo, "Não deu para mandar: " + e.message, "erro");
+    } finally {
+      $("btnMandar").disabled = false;
     }
   };
 
@@ -2255,6 +2687,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
       montarProvedores();
       $("btnImagens").hidden = provedorEscolhido() === "none";
       $("btnCelular").hidden = false;
+      $("btnBuscarPedidos").hidden = !(brand.ponte && brand.ponte.drivePedidos);
+      $("btnMandar").hidden = false;
       if (!local.provedores || (!local.provedores.kie && !local.provedores.gemini)) {
         mostrarEstado($("estadoGeracao"),
           "Nenhuma chave de imagem no .env: o carrossel sai com fundo sólido. Preencha KIE_API_KEY ou GEMINI_API_KEY e reinicie o app.", "alerta");
@@ -2269,6 +2703,7 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     caps.db = await window.claude.use("db").catch(function () { return null; });
     caps.assets = await window.claude.use("assets").catch(function () { return null; });
     caps.downloads = await window.claude.use("downloads").catch(function () { return null; });
+    caps.mcp = await window.claude.use("mcp").catch(function () { return null; });
 
     marcarChip(!!caps.sample);
     $("btnGerar").disabled = !caps.sample;
@@ -2276,7 +2711,8 @@ input[type="range"] { width: 100%; accent-color: var(--azul); }
     if (!caps.sample) {
       mostrarEstado($("estadoGeracao"), "A geração pelo Claude não está disponível nesta visualização. A página segue funcionando como diagramador: cole o JSON logo abaixo.", "alerta");
     }
-    $("btnPedir").hidden = !caps.db;
+    $("btnPedir").hidden = !(caps.mcp && PONTE.drivePedidos);
+    $("btnTrazerPC").hidden = !(caps.mcp && PONTE.onedriveBase && caps.db && caps.assets);
     if (caps.db) {
       try {
         caps.db.collection("carrosseis").orderBy("atualizadoEm", "desc").limit(20).onSnapshot(function (snap) {

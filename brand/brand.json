@@ -109,16 +109,30 @@
     "texto cinza sobre azul-escuro"
   ],
   "imagem": {
-    "estilo": "fotografia editorial documental, luz natural dura, paleta institucional dessaturada com azuis profundos, composição limpa com muito espaço negativo, profundidade de campo rasa, 35mm",
-    "negativo": "sem texto, sem letras, sem números, sem marca d'água, sem logotipo, sem colagem, sem ilustração, sem render 3d, sem rosto de pessoa pública real, sem bandeira, sem símbolo partidário",
+    "estilo": "fotografia de campanha publicitária com vida: pessoas reais em ação e com expressão genuína (estudando, comemorando uma aprovação, trabalhando concentradas), ou objeto em close como produto de estúdio sob luz dramática; cores quentes e vivas, luz dourada lateral, realces âmbar e laranja contra sombras azul-petróleo profundas, profundidade de campo rasa, acabamento cinematográfico",
+    "negativo": "sem texto, sem letras, sem números, sem marca d'água, sem logotipo, sem colagem, sem ilustração, sem render 3d, sem rosto de pessoa pública real, sem bandeira, sem símbolo partidário, sem corredor vazio, sem escritório cinza e frio, sem pilha de papel como assunto, sem sorriso de banco de imagem, sem aspecto dessaturado",
     "proporcaoCapa": "4:5",
     "proporcaoInterna": "16:9",
-    "estiloEn": "editorial documentary photograph, hard natural light, desaturated institutional palette with deep navy tones, clean composition with generous negative space, shallow depth of field, 35mm, photographic grain-free finish",
-    "negativoEn": "no text, no letters, no numbers, no watermark, no logo, no collage, no illustration, no 3d render, no charts, no recognizable public figure, no flags, no political symbols"
+    "estiloEn": "high-end advertising campaign photograph full of life: real people in candid action with genuine emotion, or a hero close-up of an object lit like a studio product shot; warm vibrant color grade, golden side light with dramatic contrast, amber and orange highlights against deep teal-navy shadows, shallow depth of field, cinematic, crisp detail",
+    "negativoEn": "no text, no letters, no numbers, no watermark, no logo, no collage, no illustration, no 3d render, no charts, no recognizable public figure, no flags, no political symbols, no empty corridors, no cold gray office, no stacks of paper as the subject, no stock-photo smile, no desaturated or washed-out look",
+    "assuntos": [
+      "pessoa real estudando à noite sob luz quente de luminária, caneta na mão, rosto concentrado",
+      "mãos marcando o caderno com marca-texto amarelo, luz lateral dourada",
+      "candidato comemorando o resultado olhando o celular, emoção genuína",
+      "close de cronômetro ou relógio sob spotlight, fundo escuro",
+      "mesa de estudo vista de cima com livros abertos, café e luz de fim de tarde",
+      "auditor ou servidor em reunião, gesto de explicação, luz de janela quente"
+    ]
   },
   "selo": {
     "arquivo": "brand/logo.png",
     "texto": "NC",
-    "nota": "A marca aparece no selo da capa. O rodapé continua sem logo: quem ancora é o handle."
+    "nota": "Capa: círculo âmbar com asterisco + handle com selo de verificado, centralizado acima do título (estilo revista). Use \"logo\" em estilo para voltar a foto/logo no círculo.",
+    "estilo": "asterisco"
+  },
+  "ponte": {
+    "drivePedidos": "13hcwp6g0MQFKv0t2kpOOoK2bdt7Wxqrk",
+    "driveProcessados": "1pnEbbTTBtVxHTlcXjK31NVvRuNW9vSrG",
+    "nota": "Pedidos do celular chegam nesta pasta do Google Drive; o PC devolve pelo OneDrive (out/_entregas)."
   }
 }

@@ -56,7 +56,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.72;
+  opacity: 1;
   flex: 0 0 auto;
 }
 
@@ -115,7 +115,7 @@
   font-size: calc(16px * var(--k));
   font-weight: 600;
   line-height: 1.4;
-  opacity: 0.66;
+  opacity: 1;
   margin: 0;
 }
 
@@ -144,15 +144,19 @@
   background-repeat: no-repeat;
 }
 
+/* A foto respira em cima; o escuro só entra na base, onde mora o título.
+   A faixa fina no topo existe só para o cabeçalho continuar legível. */
 .slide .capa-veu {
   position: absolute;
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(13, 43, 94, 0.72) 0%, rgba(13, 43, 94, 0.18) 34%, rgba(13, 43, 94, 0.88) 72%, rgba(13, 43, 94, 0.97) 100%);
+    linear-gradient(180deg, rgba(13, 43, 94, 0.55) 0%, rgba(13, 43, 94, 0) 16%, rgba(13, 43, 94, 0) 42%, rgba(13, 43, 94, 0.78) 66%, rgba(13, 43, 94, 0.96) 100%);
 }
 
-.slide.tipo-capa .corpo { justify-content: flex-end; gap: 32px; }
+.slide.fundo-foto .hdr { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45); }
+
+.slide.tipo-capa .corpo { justify-content: flex-end; gap: 36px; }
 
 .slide .selo {
   display: flex;
@@ -160,6 +164,26 @@
   gap: 16px;
   align-self: flex-start;
 }
+
+/* selo de revista: círculo âmbar com asterisco, centralizado acima do título */
+.slide.tipo-capa .selo { gap: 14px; }
+.slide.tipo-capa.alinha-centro .selo { align-self: center; }
+
+.slide .selo-asterisco {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--amarelo);
+  color: var(--tinta-destaque);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+}
+.slide .selo-asterisco svg { width: 40px; height: 40px; }
+
+.slide .selo-nome { display: inline-flex; align-items: center; gap: 8px; }
+.slide .selo-nome .verificado { width: 26px; height: 26px; flex: 0 0 auto; }
 
 .slide .selo-foto {
   width: 72px;
@@ -197,7 +221,7 @@
 .slide .gancho {
   align-self: flex-start;
   background: var(--amarelo);
-  color: var(--escuro);
+  color: var(--tinta-destaque);
   font-size: calc(38px * var(--k));
   font-weight: 800;
   line-height: 1.24;
@@ -245,7 +269,7 @@
 }
 
 .slide .figura.retrato .foto { height: 540px; }
-.slide .figura figcaption { margin-top: 12px; font-size: calc(16px * var(--k)); font-weight: 600; opacity: 0.6; }
+.slide .figura figcaption { margin-top: 12px; font-size: calc(16px * var(--k)); font-weight: 600; }
 
 /* ── lista ────────────────────────────────────────────────────────────────── */
 
@@ -291,13 +315,13 @@
 }
 
 .slide .passos .p-titulo { font-size: calc(28px * var(--k)); font-weight: 800; line-height: 1.25; }
-.slide .passos .p-texto { font-size: calc(24px * var(--k)); font-weight: 400; line-height: 1.38; opacity: 0.9; margin-top: 6px; }
+.slide .passos .p-texto { font-size: calc(24px * var(--k)); font-weight: 400; line-height: 1.38; margin-top: 6px; }
 
 /* ── métrica ──────────────────────────────────────────────────────────────── */
 
 .slide .metrica { display: flex; flex-direction: column; gap: 8px; }
 .slide .metrica .valor { font-size: calc(170px * var(--k)); font-weight: 900; line-height: 0.92; letter-spacing: -0.04em; color: var(--amarelo); }
-.slide .metrica .unidade { font-size: calc(26px * var(--k)); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.slide .metrica .unidade { font-size: calc(26px * var(--k)); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 
 /* ── barras ───────────────────────────────────────────────────────────────── */
 
@@ -315,7 +339,7 @@
 
 .slide.tipo-tese .corpo { gap: 32px; }
 .slide .tese-texto { font-size: calc(58px * var(--k)); font-weight: 900; line-height: 1.14; letter-spacing: -0.025em; margin: 0; }
-.slide .assinatura { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+.slide .assinatura { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 
 /* ── encerramento ─────────────────────────────────────────────────────────── */
 
@@ -378,3 +402,29 @@
   background-position: left center;
   background-repeat: no-repeat;
 }
+
+/* ── alinhamento (escolhido por slide no app) ─────────────────────────────── */
+/* Justificado só nos parágrafos: título justificado abre buracos entre as
+   palavras. hyphens:auto usa o lang="pt-BR" do slide para hifenizar certo. */
+
+.slide.alinha-justificado .texto,
+.slide.alinha-justificado .lista li,
+.slide.alinha-justificado .p-texto,
+.slide.alinha-justificado .cta-acao,
+.slide.alinha-justificado .fonte {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.slide.alinha-justificado .texto { max-width: 100%; }
+
+.slide.alinha-centro .corpo { align-items: center; text-align: center; }
+.slide.alinha-centro .corpo > * { align-self: center; }
+.slide.alinha-centro .texto { max-width: 92%; }
+.slide.alinha-centro .cta-titulo { align-items: center; }
+.slide.alinha-centro .lista li { text-align: left; }
+.slide.alinha-centro .passos li { text-align: left; }
+
+/* ── blocos arrastáveis ───────────────────────────────────────────────────── */
+/* O deslocamento chega como transform inline (motor: posicionarBlocos). */
+.slide .corpo > * { position: relative; }

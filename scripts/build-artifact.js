@@ -12,6 +12,19 @@ const ler = (...p) => fs.readFileSync(path.join(RAIZ, ...p), "utf8");
 const fonte = ler("artifact", "app.html");
 const brand = JSON.parse(ler("brand", "brand.json"));
 
+/* Onde este projeto mora dentro do OneDrive (ex.: "Documentos/carrossel").
+   A página publicada lê as entregas do PC por esse caminho, pelo conector do
+   Microsoft 365. Fora do OneDrive, o botão "Trazer do PC" não aparece. */
+const raizOneDrive = [process.env.OneDriveCommercial, process.env.OneDrive]
+  .filter(Boolean)
+  .map((p) => path.resolve(p))
+  .find((p) => RAIZ.toLowerCase().startsWith(p.toLowerCase() + path.sep));
+if (raizOneDrive) {
+  brand.ponte = Object.assign({}, brand.ponte, {
+    onedriveBase: path.relative(raizOneDrive, RAIZ).split(path.sep).join("/")
+  });
+}
+
 /* Logo largado na raiz do projeto (Logo.png) entra no lugar certo sozinho:
    o selo da capa. Ninguém precisa saber onde o arquivo deveria morar. */
 const destinoLogo = path.join(RAIZ, (brand.selo && brand.selo.arquivo) || "brand/logo.png");

@@ -112,25 +112,21 @@ nesta conversa.
 
 ## Pedidos vindos do celular
 
-No artifact, o botão **Pedir imagens no PC** enfileira o carrossel na coleção `pedidos`
-do banco do artifact. Quando o usuário disser "processa os pedidos", "tem pedido do
-celular?", "roda o que eu pedi no celular" — ou quando ele abrir a sessão e você já
-souber que existe fila — faça o seguinte, um pedido de cada vez:
+O botão **Pedir imagens no PC** do artifact grava o pedido como JSON na pasta do Google
+Drive `brand.json → ponte.drivePedidos`. O caminho normal é o próprio usuário tocar em
+**Buscar pedidos do celular** no app local; isso não precisa de você. Quando ele pedir
+na conversa ("processa os pedidos", "tem pedido do celular?"), faça o mesmo que o botão:
 
-1. Leia a fila com a ferramenta de dados: ação `query` na coleção `pedidos`, filtro
-   `status == "pendente"`, salvando os documentos em arquivos (`out_dir`).
-2. Para cada pedido: `node scripts/importar-pedido.js <arquivo do pedido>` — ele grava a
-   pasta em `out/` e diz qual é.
-3. `node bin/carrossel.js imagens <pasta>` (gera as fotos) e depois
-   `node bin/carrossel.js render <pasta>`.
-4. Devolva ao app pelo caminho de sempre (`preparar-app.js --listar`, subir as imagens
-   como assets, `--urls`, gravar em `carrosseis`).
-5. Marque o pedido como resolvido: ação `update` em `pedidos/<id>` com
-   `{status: "feito", pasta: "<pasta>", docId: "<docId>"}`, pinando o `if_version` que
-   você leu. Nunca apague o pedido.
-6. Diga ao usuário, em uma linha, quais temas ficaram prontos — ele vai abrir no celular.
+```
+node -e "import('./src/nucleo.js').then(n=>n.carregarEnv()).then(()=>import('./src/ponte.js')).then(async p=>{console.log(await p.buscarPedidos(console.log));console.log(await p.processarPedidos(console.log))})"
+```
 
-Se a fila estiver vazia, diga isso e não invente trabalho.
+Isso baixa os pedidos (movendo-os para `processados` no Drive), gera imagens e PNG e deixa
+a entrega em `out/_entregas/`. Diga ao usuário, em uma linha, quais temas ficaram prontos
+e que no celular é só tocar em **Trazer do PC**. Se nada veio, diga isso e não invente
+trabalho. Pedido antigo, gravado só no banco do artifact (coleção `pedidos` com
+`status: "pendente"`), ainda se resolve à mão: leia com a ferramenta de dados, salve o
+JSON e rode `node scripts/importar-pedido.js <arquivo>`.
 
 ## Imagem de órgão público
 

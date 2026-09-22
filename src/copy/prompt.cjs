@@ -42,7 +42,10 @@
       "Prompts de imagem (campo imagem.prompt), escritos em inglês, 25 a 45 palavras:",
       "- Estilo obrigatório em todo prompt: " + (im.estilo || ""),
       "- Nunca peça: " + (im.negativo || ""),
-      "- A imagem ilustra o assunto por objeto, ambiente ou gesto — mesa de trabalho, corredor institucional, papel, mãos, sala de sessão, cronômetro. Nunca peça gráfico, número ou palavra dentro da imagem: dado é slide, não imagem.",
+      "- A imagem tem vida: prefira PESSOA em ação, com emoção genuína, ou um OBJETO em close fotografado como produto de campanha. Ambiente vazio só em último caso.",
+      "- Repertório de assuntos (adapte ao slide, não copie): " + (im.assuntos || []).join("; ") + ".",
+      "- Diga no prompt quem está na cena (idade aproximada, roupa comum, gesto), onde e com que luz. Luz quente e dramática, cor viva — nada frio, cinza ou institucional.",
+      "- Nunca peça gráfico, número ou palavra dentro da imagem: dado é slide, não imagem.",
       "- Nunca descreva pessoa pública real, brasão oficial ou logotipo.",
       "- Capa em " + (im.proporcaoCapa || "4:5") + "; slides internos em " + (im.proporcaoInterna || "16:9") + "."
     ].join("\n");

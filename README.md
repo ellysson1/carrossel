@@ -86,11 +86,21 @@ Para o ícone funcionar sempre que o PC estiver ligado, responda **s** à pergun
 `instalar-atalho.ps1`: o app passa a subir minimizado no login.
 
 **Fora de casa.** Aí o celular não alcança o seu PC, e a página publicada no claude.ai
-não alcança a Kie. O caminho é a fila: escreva o carrossel no artifact e toque em
-**Pedir imagens no PC**. Isso enfileira o pedido no banco do próprio artifact. Quando
-voltar ao computador, abra o Claude Code na pasta do projeto e diga *"processa os pedidos
-do celular"*: ele gera as imagens, renderiza os PNG e devolve o carrossel ao histórico do
-app, pronto para baixar pelo celular.
+não alcança a Kie. A ponte são três botões, e nada roda sozinho:
+
+1. **No celular — Pedir imagens no PC.** O carrossel vai como JSON para a pasta
+   *Carrossel No Controle* do seu Google Drive, pelo conector do Drive.
+2. **No PC — Buscar pedidos do celular** (card Histórico do app local). O app chama o
+   Claude Code em segundo plano, que baixa os pedidos do Drive e os move para
+   *processados* (uns US$ 0,05 por clique). Aí o app gera as imagens, renderiza os PNG
+   e deixa a entrega em `out/_entregas/`, com as fotos em JPEG reduzido em `celular/`.
+3. **No celular — Trazer do PC** (card Histórico). Como o projeto mora no OneDrive,
+   a entrega sincroniza sozinha; a página lê pelo conector do Microsoft 365, sobe as
+   fotos no acervo dela e o carrossel aparece no histórico, pronto para baixar.
+
+Qualquer carrossel aberto no app local vai para o celular pelo botão **Mandar para o
+celular**. Os IDs das pastas do Drive ficam em `brand.json → ponte`; o caminho no OneDrive
+o build descobre sozinho.
 
 ### Kie ou Gemini, na hora
 
